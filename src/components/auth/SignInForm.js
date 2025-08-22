@@ -1,4 +1,4 @@
-// src/components/auth/SignInForm.js - COMPLETE FILE
+// src/components/auth/SignInForm.js - FIXED with consistent styling
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,6 +11,7 @@ import {
   Dimensions,
   Modal,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { globalStyles } from '../../styles/globalStyles';
@@ -61,7 +62,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
       setBiometricSetup(biometricInfo.isSetup);
       setBiometricType(biometricInfo.typeName || '');
     } catch (error) {
-      console.error('Check biometric status error:', error);
+      // Biometric check failed - continue without it
     }
   };
 
@@ -156,7 +157,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 Alert.alert('Success', `${biometricType} has been enabled for your account.`);
               }
             } catch (error) {
-              console.error('Biometric setup error:', error);
+              // Biometric setup failed - continue without it
             }
           }
         }
@@ -246,6 +247,21 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
     setResetCode('');
     setNewPassword('');
     setConfirmNewPassword('');
+  };
+
+  // Handle opening external links
+  const openTerms = () => {
+    const termsUrl = 'https://akchabar.com/terms'; // Replace with your actual Terms URL
+    Linking.openURL(termsUrl).catch(err => 
+      Alert.alert('Error', 'Could not open Terms of Service')
+    );
+  };
+
+  const openPrivacy = () => {
+    const privacyUrl = 'https://akchabar.com/privacy'; // Replace with your actual Privacy URL
+    Linking.openURL(privacyUrl).catch(err => 
+      Alert.alert('Error', 'Could not open Privacy Policy')
+    );
   };
 
   const renderResetModal = () => (
@@ -408,30 +424,31 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
   return (
     <SafeAreaView style={globalStyles.authContainer}>
       <StatusBar barStyle="light-content" backgroundColor={globalStyles.authContainer.backgroundColor} />
+      <LanguageSelector language={language} setLanguage={setLanguage} />
       
       <KeyboardAwareWrapper
         contentContainerStyle={[
           globalStyles.scrollContent, 
           { 
             paddingHorizontal: width * 0.05,
-            paddingTop: 40
+            paddingTop: 80
           }
         ]}
         extraScrollHeight={50}
       >
-        {/* Consistent back button for dark background */}
+        {/* Consistent back button - FIXED to match other screens */}
         <TouchableOpacity
-          style={globalStyles.backButtonDark}
+          style={globalStyles.backButton}
           onPress={() => navigateAuth('welcome')}
         >
-          <Ionicons name="arrow-back" size={22} color="#ffffff" />
+          <Ionicons name="arrow-back" size={22} color="#0f172a" />
         </TouchableOpacity>
         
-        {/* Consistent title sizing */}
-        <Text style={[globalStyles.authTitleLeft, { color: '#ffffff' }]}>
+        {/* Consistent title - FIXED */}
+        <Text style={globalStyles.authTitleLeft}>
           {t.signIn}
         </Text>
-        <Text style={[globalStyles.authSubtitleLeft, { color: '#9ca3af' }]}>
+        <Text style={globalStyles.authSubtitleLeft}>
           {t.welcomeBackSub}
         </Text>
 
@@ -644,6 +661,48 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
               </Text>
             </Text>
           </View>
+        </View>
+
+        {/* Terms with Hyperlinks */}
+        <View style={{ 
+          marginTop: 16, 
+          paddingHorizontal: 20,
+          alignItems: 'center'
+        }}>
+          <Text style={[globalStyles.footerText, { 
+            fontSize: width * 0.03,
+            color: globalStyles.textDim,
+            textAlign: 'center'
+          }]}>
+            {language === 'en' ? 'By signing in you agree to our ' : 
+             language === 'ru' ? 'Входя, вы соглашаетесь с нашими ' :
+             'Кирип, биздин '}
+            <Text 
+              style={[globalStyles.linkText, { 
+                color: '#6d28d9', 
+                textDecorationLine: 'underline'
+              }]}
+              onPress={openTerms}
+            >
+              {language === 'en' ? 'Terms of Service' : 
+               language === 'ru' ? 'Условиями использования' :
+               'Шарттарыбыз'}
+            </Text>
+            {language === 'en' ? ' and ' : 
+             language === 'ru' ? ' и ' :
+             ' жана '}
+            <Text 
+              style={[globalStyles.linkText, { 
+                color: '#6d28d9', 
+                textDecorationLine: 'underline'
+              }]}
+              onPress={openPrivacy}
+            >
+              {language === 'en' ? 'Privacy Policy' : 
+               language === 'ru' ? 'Политикой конфиденциальности' :
+               'Купуялык саясатыбыз'}
+            </Text>
+          </Text>
         </View>
       </KeyboardAwareWrapper>
 

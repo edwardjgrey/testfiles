@@ -10,6 +10,7 @@ import {
   Alert,
   Dimensions,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { globalStyles } from '../../styles/globalStyles';
@@ -40,7 +41,6 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
       
       // Simulate Google authentication
       // In real app, this would use Google Sign-In SDK
-      console.log('🔄 Google authentication...');
       
       // Mock Google response - replace with real Google Sign-In
       const mockGoogleResponse = {
@@ -69,7 +69,6 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
       
       // Simulate Apple authentication
       // In real app, this would use Apple Sign-In SDK
-      console.log('🔄 Apple authentication...');
       
       // Mock Apple response - replace with real Apple Sign-In
       const mockAppleResponse = {
@@ -95,11 +94,31 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
     handleAuthMethod('signin');
   };
 
+  // Handle opening external links
+  const openTerms = () => {
+    const termsUrl = 'https://akchabar.com/terms'; // Replace with your actual Terms URL
+    Linking.openURL(termsUrl).catch(err => 
+      Alert.alert('Error', 'Could not open Terms of Service')
+    );
+  };
+
+  const openPrivacy = () => {
+    const privacyUrl = 'https://akchabar.com/privacy'; // Replace with your actual Privacy URL
+    Linking.openURL(privacyUrl).catch(err => 
+      Alert.alert('Error', 'Could not open Privacy Policy')
+    );
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f7f8fb' }}>
         <ActivityIndicator size="large" color="#98DDA6" />
-        <Text style={{ marginTop: 16, color: '#6b7280' }}>
+        <Text style={{
+          marginTop: 16,
+          fontSize: 16,
+          color: '#6b7280',
+          textAlign: 'center'
+        }}>
           {language === 'ru' ? 'Аутентификация...' : 
            language === 'ky' ? 'Аутентификация...' : 
            'Authenticating...'}
@@ -214,7 +233,7 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
           </Text>
         </View>
 
-        {/* Terms */}
+        {/* Terms with Hyperlinks */}
         <View style={{ 
           marginTop: 16, 
           paddingHorizontal: 20,
@@ -222,11 +241,37 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
         }}>
           <Text style={[globalStyles.footerText, { 
             fontSize: width * 0.03,
-            color: globalStyles.textDim
+            color: globalStyles.textDim,
+            textAlign: 'center'
           }]}>
-            {language === 'en' ? 'By signing up you agree to our Terms of Service and Privacy Policy' : 
-             language === 'ru' ? 'Регистрируясь, вы соглашаетесь с нашими Условиями использования и Политикой конфиденциальности' :
-             'Каттолуп, биздин Шарттарыбыз жана Купуялык саясатыбыз менен макулсуз'}
+            {language === 'en' ? 'By signing up you agree to our ' : 
+             language === 'ru' ? 'Регистрируясь, вы соглашаетесь с нашими ' :
+             'Каттолуп, биздин '}
+            <Text 
+              style={[globalStyles.linkText, { 
+                color: '#6d28d9', 
+                textDecorationLine: 'underline'
+              }]}
+              onPress={openTerms}
+            >
+              {language === 'en' ? 'Terms of Service' : 
+               language === 'ru' ? 'Условиями использования' :
+               'Шарттарыбыз'}
+            </Text>
+            {language === 'en' ? ' and ' : 
+             language === 'ru' ? ' и ' :
+             ' жана '}
+            <Text 
+              style={[globalStyles.linkText, { 
+                color: '#6d28d9', 
+                textDecorationLine: 'underline'
+              }]}
+              onPress={openPrivacy}
+            >
+              {language === 'en' ? 'Privacy Policy' : 
+               language === 'ru' ? 'Политикой конфиденциальности' :
+               'Купуялык саясатыбыз'}
+            </Text>
           </Text>
         </View>
       </ScrollView>

@@ -1,4 +1,4 @@
-// App.js - FIXED VERSION with proper imports
+// App.js - CLEANED VERSION with all debug notes removed
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Alert, View, Text, ActivityIndicator } from 'react-native';
@@ -73,8 +73,6 @@ export default function App() {
   // Initialize the app
   useEffect(() => {
     const initializeApp = async () => {
-      console.log('🚀 Initializing Akchabar app...');
-      
       try {
         // Check for existing authentication
         await checkExistingAuth();
@@ -83,7 +81,6 @@ export default function App() {
         testBackendConnection();
         
       } catch (error) {
-        console.error('❌ App initialization error:', error);
         // Don't block the app if initialization fails
         setIsLoading(false);
       }
@@ -95,12 +92,8 @@ export default function App() {
   // Separate function for testing backend connection
   const testBackendConnection = async () => {
     try {
-      console.log('🔍 Testing backend connection...');
       const response = await ApiService.testConnection();
-      console.log('✅ Backend connection successful:', response);
     } catch (error) {
-      console.error('❌ Backend connection failed:', error);
-      
       // Show connection error after a delay, but don't block the app
       setTimeout(() => {
         Alert.alert(
@@ -118,42 +111,33 @@ export default function App() {
   // Enhanced checkExistingAuth function with security checks
   const checkExistingAuth = async () => {
     try {
-      console.log('🔍 Checking existing authentication...');
       setIsLoading(true);
       
       // First check if we have a token
       const token = await ApiService.getToken();
       
       if (!token) {
-        console.log('📝 No existing token found - showing onboarding/auth');
         return;
       }
-      
-      console.log('🎫 Found existing token, validating...');
       
       // Validate the token with the backend
       const response = await ApiService.validateToken();
       
       if (response.success && response.user) {
-        console.log('✅ Token valid, user authenticated:', response.user.firstName || 'User');
         setUser(response.user);
         setIsAuthenticated(true);
         setHasSeenOnboarding(true);
         
-        // IMPORTANT: Set the current user ID in SecurityService
+        // Set the current user ID in SecurityService
         SecurityService.setCurrentUser(response.user.id);
-        console.log('🔐 Set SecurityService current user to:', response.user.id);
         
         // Check security setup after successful auth
         await checkSecuritySetup(response.user.id);
       } else {
-        console.log('❌ Token invalid or expired, clearing auth state');
         // Clear invalid token
         await ApiService.removeToken();
       }
     } catch (error) {
-      console.log('⚠️ Auth check failed (this is normal for new users):', error.message);
-      
       // If there's any error, clear the auth state and let user start fresh
       await ApiService.removeToken();
     } finally {
@@ -161,24 +145,19 @@ export default function App() {
     }
   };
 
-  // Check if user needs to setup PIN or authenticate with PIN - FIXED VERSION
+  // Check if user needs to setup PIN or authenticate with PIN
   const checkSecuritySetup = async (userId) => {
     try {
-      console.log('🔒 Checking security setup status for user:', userId);
-      
       // Ensure SecurityService has the correct user ID
       SecurityService.setCurrentUser(userId);
       
       const securityStatus = await SecurityService.getSecurityStatus(userId);
-      console.log('🔒 Security status:', securityStatus);
       
       if (!securityStatus.pinSetup) {
-        console.log('📌 PIN setup required for user:', userId);
         setPinSetupRequired(true);
         setPinAuthRequired(false);
         setSecuritySetupComplete(false);
       } else if (securityStatus.isLockedOut) {
-        console.log('🔒 Account is locked out for user:', userId);
         setPinSetupRequired(false);
         setPinAuthRequired(true);
         setSecuritySetupComplete(false);
@@ -186,56 +165,43 @@ export default function App() {
         // PIN is setup, check if we need to authenticate
         const pinAuthNeeded = await SecurityService.requiresPinAuth(userId);
         if (pinAuthNeeded.required) {
-          console.log('🔑 PIN authentication required for user:', userId);
           setPinSetupRequired(false);
           setPinAuthRequired(true);
           setSecuritySetupComplete(false);
         } else {
-          console.log('✅ Security setup complete for user:', userId);
           setPinSetupRequired(false);
           setPinAuthRequired(false);
           setSecuritySetupComplete(true);
         }
       }
     } catch (error) {
-      console.error('❌ Security check failed:', error);
       // If security check fails, require PIN setup for safety
-      console.log('⚠️ Security check failed, requiring PIN setup');
       setPinSetupRequired(true);
       setPinAuthRequired(false);
       setSecuritySetupComplete(false);
     }
   };
 
-  // Handle successful PIN setup - FIXED VERSION
+  // Handle successful PIN setup
   const handlePinSetupComplete = async () => {
-    console.log('✅ PIN setup completed for user:', user?.id);
     setPinSetupRequired(false);
     setPinAuthRequired(false);
     setSecuritySetupComplete(true);
   };
 
-  // Handle successful PIN authentication - FIXED VERSION
+  // Handle successful PIN authentication
   const handlePinAuthSuccess = async () => {
-    console.log('✅ PIN authentication successful for user:', user?.id);
     setPinSetupRequired(false);
     setPinAuthRequired(false);
     setSecuritySetupComplete(true);
   };
 
-  // ===== EXISTING AUTH METHODS (unchanged) =====
-  
   const checkUserExistsEarly = async (email, phone) => {
     try {
-      console.log('🔍 Early user existence check for:', { email, phone });
-      
       const result = await ApiService.checkUserExists(email, phone);
       
       if (result.exists) {
-        console.log('👤 User already exists:', result.user);
-        
         if (result.user.email && result.user.authMethod === 'email') {
-          console.log('📧 Redirecting to email sign-in');
           setAuthData(prev => ({ 
             ...prev, 
             email: result.user.email,
@@ -252,7 +218,6 @@ export default function App() {
           }, 500);
           
         } else if (result.user.phone && result.user.authMethod === 'phone') {
-          console.log('📱 Redirecting to phone sign-in');
           setAuthData(prev => ({ 
             ...prev, 
             phone: result.user.phone,
@@ -264,7 +229,6 @@ export default function App() {
           await handlePhoneSignIn(result.user.phone);
           
         } else {
-          console.log('🔄 General redirect to sign-in');
           navigateAuth('signin-form');
           
           setTimeout(() => {
@@ -279,21 +243,17 @@ export default function App() {
         return true;
       }
       
-      console.log('✅ User does not exist - can proceed with registration');
       return false;
     } catch (error) {
-      console.error('❌ Early user check failed:', error);
       return false;
     }
   };
 
   const handlePhoneSignIn = async (phone) => {
     try {
-      console.log('📱 Starting phone sign-in for:', phone);
       const result = await ApiService.requestPhoneSignIn(phone, '+996');
       
       if (result.success) {
-        console.log('✅ SMS sent for sign-in');
         navigateAuth('verify', { phone, isSignIn: true });
         
         Alert.alert(
@@ -302,50 +262,40 @@ export default function App() {
           [{ text: 'OK' }]
         );
       } else {
-        console.error('❌ Phone sign-in request failed:', result.error);
         Alert.alert('Error', result.error);
       }
     } catch (error) {
-      console.error('❌ Phone sign-in error:', error);
       Alert.alert('Error', 'Failed to send verification code');
     }
   };
 
   const handleEmailSignIn = async (email, password) => {
     try {
-      console.log('📧 Starting email sign-in for:', email);
-      
       const result = await ApiService.signInWithEmail(email, password);
       
       if (result.success) {
-        console.log('✅ Email sign-in successful:', result.user);
         setUser(result.user);
         setIsAuthenticated(true);
         
-        // IMPORTANT: Set the user ID in SecurityService
+        // Set the user ID in SecurityService
         SecurityService.setCurrentUser(result.user.id);
-        console.log('🔐 Set SecurityService current user to:', result.user.id);
         
         // Check security setup after successful sign-in
         await checkSecuritySetup(result.user.id);
         
         Alert.alert('Welcome Back!', 'Successfully signed in to your account.');
       } else {
-        console.error('❌ Email sign-in failed:', result.error);
         Alert.alert('Sign In Failed', result.error);
       }
     } catch (error) {
-      console.error('❌ Email sign-in error:', error);
       Alert.alert('Error', 'Sign in failed. Please try again.');
     }
   };
 
   // Navigate between auth steps and collect data
   const navigateAuth = (step, data = {}) => {
-    console.log('🔄 Collecting data for step:', step, data);
     setAuthData(prev => {
       const updated = { ...prev, ...data };
-      console.log('📊 Updated authData:', updated);
       return updated;
     });
     setCurrentAuthView(step);
@@ -353,8 +303,6 @@ export default function App() {
 
   // Handle different auth methods with early checks
   const handleAuthMethod = async (method, data = {}) => {
-    console.log(`🔐 Starting ${method} authentication`);
-    
     switch (method) {
       case 'email':
         navigateAuth('email', { authMethod: 'email', isNewUser: true, ...data });
@@ -384,17 +332,12 @@ export default function App() {
   // Email registration with early check
   const handleEmailRegistration = async (email, password) => {
     try {
-      console.log('📧 handleEmailRegistration called with:', { email });
-      
       const userExists = await checkUserExistsEarly(email, null);
-      console.log('📋 User existence check result:', userExists);
       
       if (userExists) {
-        console.log('👤 User exists - redirected to sign-in');
         return;
       }
       
-      console.log('✅ User does not exist - proceeding to profile setup');
       navigateAuth('profile', {
         email,
         password,
@@ -403,7 +346,6 @@ export default function App() {
       });
       
     } catch (error) {
-      console.error('❌ Email registration error:', error);
       Alert.alert('Error', 'Something went wrong. Please try again.');
     }
   };
@@ -411,20 +353,14 @@ export default function App() {
   // Phone registration with early check
   const handlePhoneRegistration = async (phone, countryCode) => {
     try {
-      console.log('📱 handlePhoneRegistration called with:', { phone, countryCode });
-      
       const cleanPhone = phone.replace(/\s/g, '');
-      console.log('🔍 Checking if user exists with phone:', cleanPhone);
       
       const userExists = await checkUserExistsEarly(null, cleanPhone);
-      console.log('📋 User existence check result:', userExists);
       
       if (userExists) {
-        console.log('👤 User exists - redirected to sign-in');
         return;
       }
       
-      console.log('✅ User does not exist - proceeding with SMS verification');
       navigateAuth('verify', {
         phone,
         countryCode,
@@ -433,7 +369,6 @@ export default function App() {
       });
       
     } catch (error) {
-      console.error('❌ Phone registration error:', error);
       Alert.alert('Error', 'Something went wrong. Please try again.');
     }
   };
@@ -458,12 +393,8 @@ export default function App() {
   // Handle verification for both registration and sign-in
   const handleCodeVerification = async (code) => {
     try {
-      console.log('🔓 Verifying code:', code);
-      
       if (authData.isSignIn) {
         // This is a sign-in verification
-        console.log('📱 Phone sign-in verification for:', authData.phone);
-        
         const cleanPhone = authData.phone.replace(/\s/g, '');
         const result = await ApiService.verifyPhoneSignIn(
           cleanPhone, 
@@ -472,47 +403,38 @@ export default function App() {
         );
         
         if (result.success) {
-          console.log('✅ Phone sign-in successful:', result.user);
           setUser(result.user);
           setIsAuthenticated(true);
           
-          // IMPORTANT: Set the user ID in SecurityService
+          // Set the user ID in SecurityService
           SecurityService.setCurrentUser(result.user.id);
-          console.log('🔐 Set SecurityService current user to:', result.user.id);
           
           // Check security setup after successful sign-in
           await checkSecuritySetup(result.user.id);
           
           Alert.alert('Welcome Back!', 'Successfully signed in with your phone number.');
         } else {
-          console.error('❌ Phone sign-in failed:', result.error);
           Alert.alert('Verification Failed', result.error);
         }
       } else {
         // This is a registration verification - proceed to profile
-        console.log('🔓 Registration verification - proceeding to profile');
         navigateAuth('profile', { verificationCode: code });
       }
     } catch (error) {
-      console.error('❌ Verification error:', error);
       Alert.alert('Verification Error', error.message);
     }
   };
 
-  // Complete authentication - FIXED VERSION
+  // Complete authentication
   const completeAuth = async (userData = null) => {
     try {
-      console.log('🚀 Starting completeAuth...');
-      
       if (userData && !authData.isNewUser) {
         // Existing user signing in
-        console.log('✅ Existing user signed in');
         setUser(userData);
         setIsAuthenticated(true);
         
-        // IMPORTANT: Set the user ID in SecurityService
+        // Set the user ID in SecurityService
         SecurityService.setCurrentUser(userData.id);
-        console.log('🔐 Set SecurityService current user to:', userData.id);
         
         // Check security setup for existing users
         await checkSecuritySetup(userData.id);
@@ -520,41 +442,30 @@ export default function App() {
       }
 
       // New user registration
-      console.log('💾 Starting new user registration...');
-      console.log('📊 Current authData:', authData);
       
       // Validate required data
       if (!authData.firstName || !authData.lastName) {
-        console.error('❌ Missing name information');
         Alert.alert('Missing Information', 'Please complete your profile first.');
         return;
       }
 
       if (authData.authMethod === 'email' && !authData.password) {
-        console.error('❌ Missing password for email registration');
         Alert.alert('Missing Information', 'Password is required for email registration.');
         return;
       }
 
       setIsLoading(true);
       
-      console.log('📤 Sending registration request...');
       const response = await ApiService.registerUser(authData);
-      console.log('📥 Registration response received:', response);
       
       if (response && response.success) {
-        console.log('✅ Registration successful!');
-        console.log('👤 User data:', response.user);
-        
         setUser(response.user);
         setIsAuthenticated(true);
         
-        // IMPORTANT: Set the user ID in SecurityService for new users
+        // Set the user ID in SecurityService for new users
         SecurityService.setCurrentUser(response.user.id);
-        console.log('🔐 Set SecurityService current user to:', response.user.id);
         
         // NEW USERS need PIN setup - set the correct flags
-        console.log('🔐 New user - requiring PIN setup');
         setPinSetupRequired(true);
         setPinAuthRequired(false);
         setSecuritySetupComplete(false);
@@ -564,7 +475,6 @@ export default function App() {
           `Your ${authData.authMethod} account has been created successfully! Next, let's secure your account with a PIN.`
         );
       } else {
-        console.error('❌ Registration failed:', response);
         const errorMessage = response?.error || 'Unknown error occurred during registration';
         
         if (response?.shouldSignIn) {
@@ -581,7 +491,6 @@ export default function App() {
       }
       
     } catch (error) {
-      console.error('❌ Complete auth error:', error);
       Alert.alert('Registration Error', `Failed to create account: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -667,7 +576,7 @@ export default function App() {
     );
   }
 
-  // Render screens with security flow - FIXED VERSION
+  // Render screens with security flow
   const renderScreen = () => {
     if (!hasSeenOnboarding) {
       return (
@@ -681,7 +590,6 @@ export default function App() {
 
     // If user is authenticated but needs PIN setup (NEW USERS)
     if (isAuthenticated && user && pinSetupRequired && !pinAuthRequired) {
-      console.log('🔄 Rendering PIN setup for new user:', user.id);
       return (
         <PinSetup
           language={language}
@@ -693,7 +601,6 @@ export default function App() {
 
     // If user is authenticated but needs PIN authentication (EXISTING USERS)
     if (isAuthenticated && user && pinAuthRequired && !pinSetupRequired) {
-      console.log('🔄 Rendering PIN entry for existing user:', user.id);
       return (
         <PinEntry
           language={language}
@@ -706,7 +613,6 @@ export default function App() {
 
     // If user is fully authenticated and security setup is complete
     if (isAuthenticated && user && securitySetupComplete && !pinSetupRequired && !pinAuthRequired) {
-      console.log('🔄 Rendering main app for user:', user.id);
       return (
         <MainApp 
           authData={user} 
@@ -717,7 +623,6 @@ export default function App() {
     }
 
     // Authentication flow (not authenticated yet)
-    console.log('🔄 Rendering auth flow, current view:', currentAuthView);
     switch (currentAuthView) {
       case 'welcome':
         return <AuthWelcome {...authProps} />;
