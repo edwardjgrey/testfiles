@@ -1,8 +1,7 @@
-// App.js - COMPLETE FIXED VERSION with PIN Security Flow
+// App.js - FIXED VERSION with proper user ID for PIN operations
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Alert, View, Text, ActivityIndicator } from 'react-native';
+import { Alert, View, Text, ActivityIndicator, SafeAreaView } from 'react-native';
 
 // Import components
 import OnboardingFlow from './src/components/onboarding/OnboardingFlow';
@@ -140,8 +139,12 @@ export default function App() {
         setIsAuthenticated(true);
         setHasSeenOnboarding(true);
         
+        // IMPORTANT: Set the current user ID in SecurityService
+        SecurityService.setCurrentUser(response.user.id);
+        console.log('🔐 Set SecurityService current user to:', response.user.id);
+        
         // Check security setup after successful auth
-        await checkSecuritySetup();
+        await checkSecuritySetup(response.user.id);
       } else {
         console.log('❌ Token invalid or expired, clearing auth state');
         // Clear invalid token
@@ -158,33 +161,36 @@ export default function App() {
   };
 
   // Check if user needs to setup PIN or authenticate with PIN - FIXED VERSION
-  const checkSecuritySetup = async () => {
+  const checkSecuritySetup = async (userId) => {
     try {
-      console.log('🔒 Checking security setup status...');
+      console.log('🔒 Checking security setup status for user:', userId);
       
-      const securityStatus = await SecurityService.getSecurityStatus();
+      // Ensure SecurityService has the correct user ID
+      SecurityService.setCurrentUser(userId);
+      
+      const securityStatus = await SecurityService.getSecurityStatus(userId);
       console.log('🔒 Security status:', securityStatus);
       
       if (!securityStatus.pinSetup) {
-        console.log('📌 PIN setup required for new user');
+        console.log('📌 PIN setup required for user:', userId);
         setPinSetupRequired(true);
         setPinAuthRequired(false);
         setSecuritySetupComplete(false);
       } else if (securityStatus.isLockedOut) {
-        console.log('🔒 Account is locked out');
+        console.log('🔒 Account is locked out for user:', userId);
         setPinSetupRequired(false);
         setPinAuthRequired(true);
         setSecuritySetupComplete(false);
       } else {
         // PIN is setup, check if we need to authenticate
-        const pinAuthNeeded = await SecurityService.requiresPinAuth();
+        const pinAuthNeeded = await SecurityService.requiresPinAuth(userId);
         if (pinAuthNeeded.required) {
-          console.log('🔑 PIN authentication required');
+          console.log('🔑 PIN authentication required for user:', userId);
           setPinSetupRequired(false);
           setPinAuthRequired(true);
           setSecuritySetupComplete(false);
         } else {
-          console.log('✅ Security setup complete');
+          console.log('✅ Security setup complete for user:', userId);
           setPinSetupRequired(false);
           setPinAuthRequired(false);
           setSecuritySetupComplete(true);
@@ -202,7 +208,7 @@ export default function App() {
 
   // Handle successful PIN setup - FIXED VERSION
   const handlePinSetupComplete = async () => {
-    console.log('✅ PIN setup completed');
+    console.log('✅ PIN setup completed for user:', user?.id);
     setPinSetupRequired(false);
     setPinAuthRequired(false);
     setSecuritySetupComplete(true);
@@ -210,7 +216,7 @@ export default function App() {
 
   // Handle successful PIN authentication - FIXED VERSION
   const handlePinAuthSuccess = async () => {
-    console.log('✅ PIN authentication successful');
+    console.log('✅ PIN authentication successful for user:', user?.id);
     setPinSetupRequired(false);
     setPinAuthRequired(false);
     setSecuritySetupComplete(true);
@@ -315,8 +321,12 @@ export default function App() {
         setUser(result.user);
         setIsAuthenticated(true);
         
+        // IMPORTANT: Set the user ID in SecurityService
+        SecurityService.setCurrentUser(result.user.id);
+        console.log('🔐 Set SecurityService current user to:', result.user.id);
+        
         // Check security setup after successful sign-in
-        await checkSecuritySetup();
+        await checkSecuritySetup(result.user.id);
         
         Alert.alert('Welcome Back!', 'Successfully signed in to your account.');
       } else {
@@ -465,8 +475,12 @@ export default function App() {
           setUser(result.user);
           setIsAuthenticated(true);
           
+          // IMPORTANT: Set the user ID in SecurityService
+          SecurityService.setCurrentUser(result.user.id);
+          console.log('🔐 Set SecurityService current user to:', result.user.id);
+          
           // Check security setup after successful sign-in
-          await checkSecuritySetup();
+          await checkSecuritySetup(result.user.id);
           
           Alert.alert('Welcome Back!', 'Successfully signed in with your phone number.');
         } else {
@@ -495,8 +509,12 @@ export default function App() {
         setUser(userData);
         setIsAuthenticated(true);
         
+        // IMPORTANT: Set the user ID in SecurityService
+        SecurityService.setCurrentUser(userData.id);
+        console.log('🔐 Set SecurityService current user to:', userData.id);
+        
         // Check security setup for existing users
-        await checkSecuritySetup();
+        await checkSecuritySetup(userData.id);
         return;
       }
 
@@ -529,6 +547,10 @@ export default function App() {
         
         setUser(response.user);
         setIsAuthenticated(true);
+        
+        // IMPORTANT: Set the user ID in SecurityService for new users
+        SecurityService.setCurrentUser(response.user.id);
+        console.log('🔐 Set SecurityService current user to:', response.user.id);
         
         // NEW USERS need PIN setup - set the correct flags
         console.log('🔐 New user - requiring PIN setup');
@@ -578,6 +600,9 @@ export default function App() {
     setPinAuthRequired(false);
     setSecuritySetupComplete(false);
     
+    // Clear the current user from SecurityService
+    SecurityService.setCurrentUser(null);
+    
     // Reset ALL auth data
     setAuthData({
       authMethod: '',
@@ -620,24 +645,22 @@ export default function App() {
   // Loading screen
   if (isLoading) {
     return (
-      <SafeAreaProvider>
-        <View style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: '#05212A'
+      <SafeAreaView style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#05212A'
+      }}>
+        <ActivityIndicator size="large" color="#98DDA6" />
+        <Text style={{
+          marginTop: 16,
+          fontSize: 16,
+          color: '#9ca3af',
+          textAlign: 'center'
         }}>
-          <ActivityIndicator size="large" color="#98DDA6" />
-          <Text style={{
-            marginTop: 16,
-            fontSize: 16,
-            color: '#9ca3af',
-            textAlign: 'center'
-          }}>
-            {isAuthenticated ? 'Setting up your account...' : 'Loading Akchabar...'}
-          </Text>
-        </View>
-      </SafeAreaProvider>
+          {isAuthenticated ? 'Setting up your account...' : 'Loading Akchabar...'}
+        </Text>
+      </SafeAreaView>
     );
   }
 
@@ -655,7 +678,7 @@ export default function App() {
 
     // If user is authenticated but needs PIN setup (NEW USERS)
     if (isAuthenticated && user && pinSetupRequired && !pinAuthRequired) {
-      console.log('🔄 Rendering PIN setup for new user');
+      console.log('🔄 Rendering PIN setup for new user:', user.id);
       return (
         <PinSetup
           language={language}
@@ -667,7 +690,7 @@ export default function App() {
 
     // If user is authenticated but needs PIN authentication (EXISTING USERS)
     if (isAuthenticated && user && pinAuthRequired && !pinSetupRequired) {
-      console.log('🔄 Rendering PIN entry for existing user');
+      console.log('🔄 Rendering PIN entry for existing user:', user.id);
       return (
         <PinEntry
           language={language}
@@ -680,7 +703,7 @@ export default function App() {
 
     // If user is fully authenticated and security setup is complete
     if (isAuthenticated && user && securitySetupComplete && !pinSetupRequired && !pinAuthRequired) {
-      console.log('🔄 Rendering main app');
+      console.log('🔄 Rendering main app for user:', user.id);
       return (
         <MainApp 
           authData={user} 
@@ -715,9 +738,9 @@ export default function App() {
   };
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaView style={{ flex: 1 }}>
       <StatusBar style="auto" />
       {renderScreen()}
-    </SafeAreaProvider>
+    </SafeAreaView>
   );
 }

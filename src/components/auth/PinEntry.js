@@ -1,4 +1,4 @@
-// src/components/auth/PinEntry.js - PIN ENTRY for EXISTING USERS
+// src/components/auth/PinEntry.js - FIXED VERSION with proper user ID handling
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -30,9 +30,16 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
   const fadeAnimation = new Animated.Value(1);
 
   useEffect(() => {
-    checkSecurityStatus();
-    checkBiometricAvailability();
-  }, []);
+    if (user?.id) {
+      console.log('🔐 PinEntry initialized for user:', user.id);
+      // Set the current user in SecurityService
+      SecurityService.setCurrentUser(user.id);
+      checkSecurityStatus();
+      checkBiometricAvailability();
+    } else {
+      console.error('❌ PinEntry: No user ID provided');
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     let interval;
@@ -53,7 +60,15 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
 
   const checkSecurityStatus = async () => {
     try {
-      const status = await SecurityService.getSecurityStatus();
+      if (!user?.id) {
+        console.error('❌ No user ID for security status check');
+        return;
+      }
+
+      console.log('🔍 Checking security status for user:', user.id);
+      const status = await SecurityService.getSecurityStatus(user.id);
+      console.log('📊 Security status:', status);
+      
       setAttempts(status.failedAttempts);
       setIsLockedOut(status.isLockedOut);
       if (status.isLockedOut) {
@@ -156,14 +171,28 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
 
   const verifyPin = async (enteredPin) => {
     try {
+      if (!user?.id) {
+        console.error('❌ No user ID for PIN verification');
+        Alert.alert('Error', 'User information is missing');
+        return;
+      }
+
       setLoading(true);
       
-      const result = await SecurityService.verifyPin(enteredPin);
+      console.log('🔍 Verifying PIN for user:', user.id);
+      
+      // Ensure SecurityService has the correct user ID
+      SecurityService.setCurrentUser(user.id);
+      
+      // Verify PIN with explicit user ID
+      const result = await SecurityService.verifyPin(enteredPin, user.id);
+      console.log('🔍 PIN verification result:', result);
       
       if (result.success) {
-        console.log('✅ PIN verification successful');
+        console.log('✅ PIN verification successful for user:', user.id);
         onSuccess();
       } else {
+        console.log('❌ PIN verification failed for user:', user.id, 'Error:', result.error);
         shakeError();
         setPin('');
         
@@ -195,7 +224,7 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
       const result = await BiometricService.authenticateWithBiometric();
       
       if (result.success) {
-        console.log('✅ Biometric authentication successful');
+        console.log('✅ Biometric authentication successful for user:', user?.id);
         onSuccess();
       } else if (!result.cancelled) {
         Alert.alert(getText('biometricFailed'), result.error);
@@ -360,6 +389,16 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
             <ActivityIndicator size="small" color="#98DDA6" />
           </View>
         )}
+
+        {/* Debug Info */}
+        {__DEV__ && (
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugText}>Debug: User ID: {user?.id || 'MISSING'}</Text>
+            <Text style={styles.debugText}>PIN Length: {pin.length}</Text>
+            <Text style={styles.debugText}>Attempts: {attempts}</Text>
+            <Text style={styles.debugText}>Locked: {isLockedOut ? 'Yes' : 'No'}</Text>
+          </View>
+        )}
       </Animated.View>
     </SafeAreaView>
   );
@@ -513,6 +552,17 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: 'center',
     marginTop: 20,
+  },
+  debugContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  debugText: {
+    color: '#9ca3af',
+    fontSize: 12,
+    marginBottom: 2,
   },
 });
 

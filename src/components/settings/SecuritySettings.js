@@ -1,909 +1,453 @@
-// src/components/settings/SecuritySettings.js - COMPLETE VERSION
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  Alert,
-  Switch,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import SecurityService from '../../services/securityService';
-import BiometricService from '../../services/biometricService';
+// src/services/securityService.js - FIXED VERSION with user-specific PIN storage
+import * as SecureStore from 'expo-secure-store';
+import * as Crypto from 'expo-crypto';
+import { Alert } from 'react-native';
 
-const SecuritySettings = ({ language, user, onBack }) => {
-  const [loading, setLoading] = useState(false);
-  const [pinSetup, setPinSetup] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [biometricSetup, setBiometricSetup] = useState(false);
-  const [biometricType, setBiometricType] = useState('');
-  const [failedAttempts, setFailedAttempts] = useState(0);
-  const [lastAttemptTime, setLastAttemptTime] = useState(null);
-  const [isLockedOut, setIsLockedOut] = useState(false);
-
-  useEffect(() => {
-    loadSecurityStatus();
-  }, []);
-
-  const getText = (key) => {
-    const texts = {
-      en: {
-        securitySettings: 'Security Settings',
-        pinCode: 'PIN Code',
-        pinCodeDesc: 'Secure your app with a 6-digit PIN',
-        changePinCode: 'Change PIN Code',
-        removePinCode: 'Remove PIN Code',
-        biometricAuth: 'Biometric Authentication',
-        biometricDesc: `Use ${biometricType} for quick access`,
-        enableBiometric: `Enable ${biometricType}`,
-        disableBiometric: `Disable ${biometricType}`,
-        securityStatus: 'Security Status',
-        failedAttempts: 'Failed Attempts',
-        lastAttempt: 'Last Attempt',
-        emergencyReset: 'Emergency Reset',
-        emergencyResetDesc: 'Reset all security settings (Development only)',
-        confirmChange: 'Confirm Change',
-        confirmRemove: 'Confirm Removal',
-        enterCurrentPin: 'Enter your current PIN to continue',
-        enterNewPin: 'Enter your new PIN',
-        confirmNewPin: 'Confirm your new PIN',
-        pinChanged: 'PIN changed successfully',
-        pinRemoved: 'PIN removed successfully',
-        biometricEnabled: 'Biometric authentication enabled',
-        biometricDisabled: 'Biometric authentication disabled',
-        setupPin: 'Setup PIN',
-        setupPinDesc: 'Setup a PIN to secure your account',
-        securityTips: 'Security Tips',
-        tipSecurePin: 'Use a PIN that\'s not easily guessable',
-        tipBiometric: 'Enable biometric authentication for convenience',
-        tipRegularUpdate: 'Update your PIN regularly',
-        accountSecurity: 'Account Security',
-        deviceSecurity: 'Device Security',
-        enabled: 'Enabled',
-        disabled: 'Disabled',
-        never: 'Never',
-        lockoutWarning: 'Your account is currently locked due to too many failed attempts',
-        securityScore: 'Security Score'
-      },
-      ru: {
-        securitySettings: 'Настройки безопасности',
-        pinCode: 'PIN-код',
-        pinCodeDesc: 'Защитите приложение 6-значным PIN',
-        changePinCode: 'Изменить PIN-код',
-        removePinCode: 'Удалить PIN-код',
-        biometricAuth: 'Биометрическая аутентификация',
-        biometricDesc: `Используйте ${biometricType} для быстрого доступа`,
-        enableBiometric: `Включить ${biometricType}`,
-        disableBiometric: `Отключить ${biometricType}`,
-        securityStatus: 'Статус безопасности',
-        failedAttempts: 'Неудачные попытки',
-        lastAttempt: 'Последняя попытка',
-        emergencyReset: 'Экстренный сброс',
-        emergencyResetDesc: 'Сбросить все настройки безопасности (Только для разработки)',
-        confirmChange: 'Подтвердить изменение',
-        confirmRemove: 'Подтвердить удаление',
-        enterCurrentPin: 'Введите текущий PIN для продолжения',
-        enterNewPin: 'Введите новый PIN',
-        confirmNewPin: 'Подтвердите новый PIN',
-        pinChanged: 'PIN успешно изменен',
-        pinRemoved: 'PIN успешно удален',
-        biometricEnabled: 'Биометрическая аутентификация включена',
-        biometricDisabled: 'Биометрическая аутентификация отключена',
-        setupPin: 'Настроить PIN',
-        setupPinDesc: 'Настройте PIN для защиты аккаунта',
-        securityTips: 'Советы по безопасности',
-        tipSecurePin: 'Используйте PIN, который нелегко угадать',
-        tipBiometric: 'Включите биометрическую аутентификацию для удобства',
-        tipRegularUpdate: 'Регулярно обновляйте свой PIN',
-        accountSecurity: 'Безопасность аккаунта',
-        deviceSecurity: 'Безопасность устройства',
-        enabled: 'Включено',
-        disabled: 'Отключено',
-        never: 'Никогда',
-        lockoutWarning: 'Ваш аккаунт заблокирован из-за слишком многих неудачных попыток',
-        securityScore: 'Оценка безопасности'
-      },
-      ky: {
-        securitySettings: 'Коопсуздук жөндөөлөрү',
-        pinCode: 'PIN коду',
-        pinCodeDesc: '6 сандуу PIN менен колдонмону коргоңуз',
-        changePinCode: 'PIN кодун өзгөртүү',
-        removePinCode: 'PIN кодун алып салуу',
-        biometricAuth: 'Биометрикалык аутентификация',
-        biometricDesc: `Тез кирүү үчүн ${biometricType} колдонуңуз`,
-        enableBiometric: `${biometricType} иштетүү`,
-        disableBiometric: `${biometricType} өчүрүү`,
-        securityStatus: 'Коопсуздук абалы',
-        failedAttempts: 'Ийгиликсиз аракеттер',
-        lastAttempt: 'Акыркы аракет',
-        emergencyReset: 'Шашылыш калыбына келтирүү',
-        emergencyResetDesc: 'Бардык коопсуздук жөндөөлөрүн калыбына келтирүү (Өнүктүрүү үчүн гана)',
-        confirmChange: 'Өзгөртүүнү ырастоо',
-        confirmRemove: 'Алып салууну ырастоо',
-        enterCurrentPin: 'Улантуу үчүн учурдагы PIN киргизиңиз',
-        enterNewPin: 'Жаңы PIN киргизиңиз',
-        confirmNewPin: 'Жаңы PIN ырастаңыз',
-        pinChanged: 'PIN ийгиликтүү өзгөртүлдү',
-        pinRemoved: 'PIN ийгиликтүү алынып салынды',
-        biometricEnabled: 'Биометрикалык аутентификация иштетилди',
-        biometricDisabled: 'Биометрикалык аутентификация өчүрүлдү',
-        setupPin: 'PIN жөндөө',
-        setupPinDesc: 'Аккаунтуңузду коргоо үчүн PIN жөндөңүз',
-        securityTips: 'Коопсуздук кеңештери',
-        tipSecurePin: 'Оңой таанылбаган PIN колдонуңуз',
-        tipBiometric: 'Ыңгайлуулук үчүн биометрикалык аутентификацияны иштетиңиз',
-        tipRegularUpdate: 'PIN кодуңузду үзгүлтүксүз жаңыртып туруңуз',
-        accountSecurity: 'Аккаунт коопсуздугу',
-        deviceSecurity: 'Түзмөк коопсуздугу',
-        enabled: 'Иштетилген',
-        disabled: 'Өчүрүлгөн',
-        never: 'Эч качан',
-        lockoutWarning: 'Аккаунтуңуз көп жолу туура эмес аракет себеби менен бөгөттөлдү',
-        securityScore: 'Коопсуздук баасы'
-      }
-    };
-    return texts[language]?.[key] || texts.en[key] || key;
-  };
-
-  const loadSecurityStatus = async () => {
-    try {
-      setLoading(true);
-      
-      // Get security status
-      const securityStatus = await SecurityService.getSecurityStatus();
-      setPinSetup(securityStatus.pinSetup);
-      setFailedAttempts(securityStatus.failedAttempts);
-      setIsLockedOut(securityStatus.isLockedOut);
-      
-      // Get biometric status
-      const biometricInfo = await BiometricService.getBiometricInfo();
-      setBiometricAvailable(biometricInfo.available);
-      setBiometricSetup(biometricInfo.isSetup);
-      setBiometricType(biometricInfo.typeName || 'Biometric');
-      
-    } catch (error) {
-      console.error('Load security status error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSetupPin = () => {
-    // Navigate to PIN setup
-    Alert.alert('Setup PIN', 'PIN setup will be implemented here');
-  };
-
-  const handleChangePin = () => {
-    Alert.prompt(
-      getText('enterCurrentPin'),
-      '',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Continue',
-          onPress: (currentPin) => {
-            if (currentPin && currentPin.length === 6) {
-              promptNewPin(currentPin);
-            } else {
-              Alert.alert('Error', 'Please enter a valid 6-digit PIN');
-            }
-          }
-        }
-      ],
-      'secure-text'
-    );
-  };
-
-  const promptNewPin = (currentPin) => {
-    Alert.prompt(
-      getText('enterNewPin'),
-      '',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Continue',
-          onPress: (newPin) => {
-            if (newPin && newPin.length === 6) {
-              confirmNewPin(currentPin, newPin);
-            } else {
-              Alert.alert('Error', 'Please enter a valid 6-digit PIN');
-            }
-          }
-        }
-      ],
-      'secure-text'
-    );
-  };
-
-  const confirmNewPin = (currentPin, newPin) => {
-    Alert.prompt(
-      getText('confirmNewPin'),
-      '',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Change',
-          onPress: async (confirmPin) => {
-            if (confirmPin === newPin) {
-              await changePin(currentPin, newPin);
-            } else {
-              Alert.alert('Error', 'PINs do not match');
-            }
-          }
-        }
-      ],
-      'secure-text'
-    );
-  };
-
-  const changePin = async (currentPin, newPin) => {
-    try {
-      setLoading(true);
-      
-      const result = await SecurityService.changePin(currentPin, newPin, user.id);
-      
-      if (result.success) {
-        Alert.alert('Success', getText('pinChanged'));
-        await loadSecurityStatus();
-      } else {
-        Alert.alert('Error', result.error);
-      }
-    } catch (error) {
-      console.error('Change PIN error:', error);
-      Alert.alert('Error', 'Failed to change PIN');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemovePin = () => {
-    Alert.alert(
-      getText('confirmRemove'),
-      'Are you sure you want to remove your PIN? This will make your account less secure.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            Alert.prompt(
-              getText('enterCurrentPin'),
-              '',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Remove',
-                  style: 'destructive',
-                  onPress: removePin
-                }
-              ],
-              'secure-text'
-            );
-          }
-        }
-      ]
-    );
-  };
-
-  const removePin = async (pin) => {
-    try {
-      setLoading(true);
-      
-      const result = await SecurityService.removePin(pin);
-      
-      if (result.success) {
-        Alert.alert('Success', getText('pinRemoved'));
-        await loadSecurityStatus();
-      } else {
-        Alert.alert('Error', result.error);
-      }
-    } catch (error) {
-      console.error('Remove PIN error:', error);
-      Alert.alert('Error', 'Failed to remove PIN');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBiometricToggle = async (enabled) => {
-    try {
-      setLoading(true);
-      
-      if (enabled) {
-        const result = await BiometricService.setupBiometric(user.id);
-        if (result.success) {
-          setBiometricSetup(true);
-          Alert.alert('Success', getText('biometricEnabled'));
-        } else if (!result.cancelled) {
-          Alert.alert('Error', result.error || 'Failed to enable biometric authentication');
-        }
-      } else {
-        const result = await BiometricService.disableBiometric();
-        if (result) {
-          setBiometricSetup(false);
-          Alert.alert('Success', getText('biometricDisabled'));
-        } else {
-          Alert.alert('Error', 'Failed to disable biometric authentication');
-        }
-      }
-    } catch (error) {
-      console.error('Biometric toggle error:', error);
-      Alert.alert('Error', 'Failed to change biometric setting');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmergencyReset = () => {
-    Alert.alert(
-      getText('emergencyReset'),
-      'This will reset ALL security settings. Only use in development!',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await SecurityService.emergencyReset();
-              await BiometricService.disableBiometric();
-              Alert.alert('Success', 'Security settings reset');
-              await loadSecurityStatus();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to reset security settings');
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  // Calculate security score
-  const getSecurityScore = () => {
-    let score = 0;
-    let maxScore = 100;
+class SecurityService {
+  constructor() {
+    // Base keys - will be combined with user ID for user-specific storage
+    this.PIN_KEY_BASE = 'user_pin_hash';
+    this.PIN_SALT_KEY_BASE = 'user_pin_salt';
+    this.PIN_SETUP_KEY_BASE = 'pin_setup_complete';
+    this.FAILED_ATTEMPTS_KEY_BASE = 'pin_failed_attempts';
+    this.LOCKOUT_TIME_KEY_BASE = 'pin_lockout_time';
     
-    if (pinSetup) score += 60;
-    if (biometricSetup) score += 40;
-    
-    return Math.round((score / maxScore) * 100);
-  };
-
-  const getSecurityScoreColor = (score) => {
-    if (score >= 80) return '#10b981'; // Green
-    if (score >= 60) return '#f59e0b'; // Yellow
-    return '#ef4444'; // Red
-  };
-
-  const getSecurityScoreText = (score) => {
-    if (score >= 80) return 'Excellent';
-    if (score >= 60) return 'Good';
-    if (score >= 40) return 'Fair';
-    return 'Poor';
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#05212a" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#98DDA6" />
-          <Text style={styles.loadingText}>Loading security settings...</Text>
-        </View>
-      </SafeAreaView>
-    );
+    this.MAX_ATTEMPTS = 5;
+    this.LOCKOUT_DURATION = 30 * 60 * 1000; // 30 minutes
   }
 
-  const securityScore = getSecurityScore();
+  // Helper function to generate user-specific keys
+  getUserSpecificKey(baseKey, userId) {
+    if (!userId) {
+      throw new Error('User ID is required for PIN operations');
+    }
+    return `${baseKey}_${userId}`;
+  }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#05212a" />
+  // Generate a random salt for PIN hashing
+  async generateSalt() {
+    const randomBytes = await Crypto.getRandomBytesAsync(32);
+    return Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Hash PIN with salt
+  async hashPin(pin, salt) {
+    const pinWithSalt = pin + salt;
+    return await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, pinWithSalt);
+  }
+
+  // Setup PIN for a specific user - FIXED VERSION
+  async setupPin(pin, userId) {
+    try {
+      console.log('🔐 Setting up PIN for user:', userId);
+
+      if (!userId) {
+        throw new Error('User ID is required to setup PIN');
+      }
+
+      // Validate PIN
+      if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+        throw new Error('PIN must be exactly 6 digits');
+      }
+
+      // Generate user-specific keys
+      const pinKey = this.getUserSpecificKey(this.PIN_KEY_BASE, userId);
+      const saltKey = this.getUserSpecificKey(this.PIN_SALT_KEY_BASE, userId);
+      const setupKey = this.getUserSpecificKey(this.PIN_SETUP_KEY_BASE, userId);
+
+      // Generate salt and hash PIN
+      const salt = await this.generateSalt();
+      const hashedPin = await this.hashPin(pin, salt);
+
+      // Store securely with user-specific keys
+      await SecureStore.setItemAsync(pinKey, hashedPin);
+      await SecureStore.setItemAsync(saltKey, salt);
+      await SecureStore.setItemAsync(setupKey, 'true');
+
+      // Reset any failed attempts for this user
+      await this.resetFailedAttempts(userId);
+
+      console.log('✅ PIN setup completed successfully for user:', userId);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ PIN setup failed for user:', userId, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Verify PIN for a specific user - FIXED VERSION
+  async verifyPin(enteredPin, userId) {
+    try {
+      console.log('🔍 Verifying PIN for user:', userId);
+
+      if (!userId) {
+        throw new Error('User ID is required to verify PIN');
+      }
+
+      // Check if user is locked out
+      const lockoutCheck = await this.checkLockout(userId);
+      if (!lockoutCheck.allowed) {
+        return {
+          success: false,
+          error: `Too many failed attempts. Try again in ${Math.ceil(lockoutCheck.remainingTime / 60000)} minutes.`,
+          lockedOut: true,
+          remainingTime: lockoutCheck.remainingTime
+        };
+      }
+
+      // Validate input
+      if (!enteredPin || enteredPin.length !== 6 || !/^\d{6}$/.test(enteredPin)) {
+        await this.incrementFailedAttempts(userId);
+        return { success: false, error: 'Invalid PIN format' };
+      }
+
+      // Generate user-specific keys
+      const pinKey = this.getUserSpecificKey(this.PIN_KEY_BASE, userId);
+      const saltKey = this.getUserSpecificKey(this.PIN_SALT_KEY_BASE, userId);
+
+      // Get stored PIN hash and salt for this user
+      const storedHash = await SecureStore.getItemAsync(pinKey);
+      const salt = await SecureStore.getItemAsync(saltKey);
+
+      if (!storedHash || !salt) {
+        return { success: false, error: 'PIN not set up for this user' };
+      }
+
+      // Hash entered PIN with stored salt
+      const enteredHash = await this.hashPin(enteredPin, salt);
+
+      // Compare hashes
+      if (enteredHash === storedHash) {
+        console.log('✅ PIN verified successfully for user:', userId);
+        await this.resetFailedAttempts(userId);
+        return { success: true };
+      } else {
+        console.log('❌ PIN verification failed for user:', userId);
+        await this.incrementFailedAttempts(userId);
+        
+        const attempts = await this.getFailedAttempts(userId);
+        const remainingAttempts = this.MAX_ATTEMPTS - attempts;
+        
+        if (remainingAttempts <= 0) {
+          await this.setLockout(userId);
+          return {
+            success: false,
+            error: 'Too many failed attempts. Account locked for 30 minutes.',
+            lockedOut: true
+          };
+        }
+        
+        return {
+          success: false,
+          error: `Incorrect PIN. ${remainingAttempts} attempts remaining.`,
+          remainingAttempts
+        };
+      }
+    } catch (error) {
+      console.error('❌ PIN verification error for user:', userId, error);
+      return { success: false, error: 'PIN verification failed' };
+    }
+  }
+
+  // Check if PIN is set up for a specific user - FIXED VERSION
+  async isPinSetup(userId) {
+    try {
+      if (!userId) {
+        return false;
+      }
       
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Ionicons name="arrow-back" size={24} color="#ffffff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{getText('securitySettings')}</Text>
-        <View style={styles.placeholder} />
-      </View>
+      const setupKey = this.getUserSpecificKey(this.PIN_SETUP_KEY_BASE, userId);
+      const isSetup = await SecureStore.getItemAsync(setupKey);
+      return isSetup === 'true';
+    } catch (error) {
+      console.error('Check PIN setup error for user:', userId, error);
+      return false;
+    }
+  }
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Security Score */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="shield-checkmark" size={24} color="#98DDA6" />
-            <Text style={styles.sectionTitle}>{getText('securityScore')}</Text>
-          </View>
-          
-          <View style={styles.scoreCard}>
-            <View style={styles.scoreCircle}>
-              <Text style={[styles.scoreNumber, { color: getSecurityScoreColor(securityScore) }]}>
-                {securityScore}
-              </Text>
-              <Text style={styles.scoreLabel}>%</Text>
-            </View>
-            <View style={styles.scoreInfo}>
-              <Text style={[styles.scoreStatus, { color: getSecurityScoreColor(securityScore) }]}>
-                {getSecurityScoreText(securityScore)}
-              </Text>
-              <Text style={styles.scoreDescription}>
-                {securityScore >= 80 ? 'Your account is well protected' :
-                 securityScore >= 60 ? 'Your account has good security' :
-                 securityScore >= 40 ? 'Your account needs better security' :
-                 'Your account is at risk'}
-              </Text>
-            </View>
-          </View>
-        </View>
+  // Change PIN for a specific user - FIXED VERSION
+  async changePin(oldPin, newPin, userId) {
+    try {
+      console.log('🔄 Changing PIN for user:', userId);
 
-        {/* Lockout Warning */}
-        {isLockedOut && (
-          <View style={styles.warningCard}>
-            <Ionicons name="warning" size={24} color="#f59e0b" />
-            <Text style={styles.warningText}>
-              {getText('lockoutWarning')}
-            </Text>
-          </View>
-        )}
+      if (!userId) {
+        throw new Error('User ID is required to change PIN');
+      }
 
-        {/* PIN Code Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="lock-closed" size={24} color="#98DDA6" />
-            <Text style={styles.sectionTitle}>{getText('pinCode')}</Text>
-            <View style={[styles.statusBadge, pinSetup ? styles.enabledBadge : styles.disabledBadge]}>
-              <Text style={[styles.statusBadgeText, pinSetup ? styles.enabledText : styles.disabledText]}>
-                {pinSetup ? getText('enabled') : getText('disabled')}
-              </Text>
-            </View>
-          </View>
-          
-          <Text style={styles.sectionDescription}>
-            {getText('pinCodeDesc')}
-          </Text>
+      // Verify old PIN first
+      const oldPinVerification = await this.verifyPin(oldPin, userId);
+      if (!oldPinVerification.success) {
+        return { success: false, error: 'Current PIN is incorrect' };
+      }
 
-          {pinSetup ? (
-            <View style={styles.optionsContainer}>
-              <TouchableOpacity
-                style={styles.option}
-                onPress={handleChangePin}
-                disabled={loading}
-              >
-                <Ionicons name="create-outline" size={20} color="#ffffff" />
-                <Text style={styles.optionText}>{getText('changePinCode')}</Text>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.option, styles.dangerOption]}
-                onPress={handleRemovePin}
-                disabled={loading}
-              >
-                <Ionicons name="trash-outline" size={20} color="#ef4444" />
-                <Text style={[styles.optionText, styles.dangerText]}>
-                  {getText('removePinCode')}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color="#ef4444" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.setupButton}
-              onPress={handleSetupPin}
-              disabled={loading}
-            >
-              <Ionicons name="add-circle" size={20} color="#000000" />
-              <Text style={styles.setupButtonText}>{getText('setupPin')}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+      // Setup new PIN
+      return await this.setupPin(newPin, userId);
+    } catch (error) {
+      console.error('❌ PIN change failed for user:', userId, error);
+      return { success: false, error: error.message };
+    }
+  }
 
-        {/* Biometric Authentication Section */}
-        {biometricAvailable && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons 
-                name={biometricType === 'Face ID' ? 'scan' : 'finger-print'} 
-                size={24} 
-                color="#98DDA6" 
-              />
-              <Text style={styles.sectionTitle}>{getText('biometricAuth')}</Text>
-              <View style={[styles.statusBadge, biometricSetup ? styles.enabledBadge : styles.disabledBadge]}>
-                <Text style={[styles.statusBadgeText, biometricSetup ? styles.enabledText : styles.disabledText]}>
-                  {biometricSetup ? getText('enabled') : getText('disabled')}
-                </Text>
-              </View>
-            </View>
-            
-            <Text style={styles.sectionDescription}>
-              {getText('biometricDesc')}
-            </Text>
+  // Remove PIN for a specific user - FIXED VERSION
+  async removePin(pin, userId) {
+    try {
+      console.log('🗑️ Removing PIN for user:', userId);
 
-            <View style={styles.toggleContainer}>
-              <Text style={styles.toggleLabel}>
-                {biometricSetup ? getText('disableBiometric') : getText('enableBiometric')}
-              </Text>
-              <Switch
-                value={biometricSetup}
-                onValueChange={handleBiometricToggle}
-                trackColor={{ false: '#374151', true: '#98DDA6' }}
-                thumbColor={biometricSetup ? '#ffffff' : '#9ca3af'}
-                disabled={loading || !pinSetup}
-              />
-            </View>
-            
-            {!pinSetup && (
-              <Text style={styles.requirementText}>
-                PIN setup required to enable biometric authentication
-              </Text>
-            )}
-          </View>
-        )}
+      if (!userId) {
+        throw new Error('User ID is required to remove PIN');
+      }
 
-        {/* Security Status Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="information-circle" size={24} color="#98DDA6" />
-            <Text style={styles.sectionTitle}>{getText('securityStatus')}</Text>
-          </View>
-          
-          <View style={styles.statusContainer}>
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>PIN Setup</Text>
-              <Text style={[styles.statusValue, pinSetup && styles.statusValueActive]}>
-                {pinSetup ? getText('enabled') : getText('disabled')}
-              </Text>
-            </View>
-            
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Biometric Auth</Text>
-              <Text style={[styles.statusValue, biometricSetup && styles.statusValueActive]}>
-                {biometricSetup ? getText('enabled') : getText('disabled')}
-              </Text>
-            </View>
-            
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>{getText('failedAttempts')}</Text>
-              <Text style={[styles.statusValue, failedAttempts > 0 && styles.statusValueWarning]}>
-                {failedAttempts}/5
-              </Text>
-            </View>
-            
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>{getText('lastAttempt')}</Text>
-              <Text style={styles.statusValue}>
-                {lastAttemptTime ? new Date(lastAttemptTime).toLocaleString() : getText('never')}
-              </Text>
-            </View>
-          </View>
-        </View>
+      // Verify PIN first
+      const verification = await this.verifyPin(pin, userId);
+      if (!verification.success) {
+        return { success: false, error: 'Incorrect PIN' };
+      }
 
-        {/* Security Tips Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="bulb" size={24} color="#98DDA6" />
-            <Text style={styles.sectionTitle}>{getText('securityTips')}</Text>
-          </View>
-          
-          <View style={styles.tipsContainer}>
-            <View style={styles.tip}>
-              <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.tipText}>{getText('tipSecurePin')}</Text>
-            </View>
-            
-            <View style={styles.tip}>
-              <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.tipText}>{getText('tipBiometric')}</Text>
-            </View>
-            
-            <View style={styles.tip}>
-              <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.tipText}>{getText('tipRegularUpdate')}</Text>
-            </View>
-          </View>
-        </View>
+      // Generate user-specific keys
+      const pinKey = this.getUserSpecificKey(this.PIN_KEY_BASE, userId);
+      const saltKey = this.getUserSpecificKey(this.PIN_SALT_KEY_BASE, userId);
+      const setupKey = this.getUserSpecificKey(this.PIN_SETUP_KEY_BASE, userId);
 
-        {/* Emergency Reset (Development Only) */}
-        {__DEV__ && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="nuclear" size={24} color="#ef4444" />
-              <Text style={styles.sectionTitle}>{getText('emergencyReset')}</Text>
-            </View>
-            
-            <Text style={styles.sectionDescription}>
-              {getText('emergencyResetDesc')}
-            </Text>
-            
-            <TouchableOpacity
-              style={[styles.setupButton, styles.emergencyButton]}
-              onPress={handleEmergencyReset}
-              disabled={loading}
-            >
-              <Ionicons name="trash" size={20} color="#ffffff" />
-              <Text style={[styles.setupButtonText, styles.emergencyButtonText]}>
-                {getText('emergencyReset')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      // Remove all PIN-related data for this user
+      await SecureStore.deleteItemAsync(pinKey);
+      await SecureStore.deleteItemAsync(saltKey);
+      await SecureStore.deleteItemAsync(setupKey);
+      await this.resetFailedAttempts(userId);
 
-        {/* Bottom Padding */}
-        <View style={styles.bottomPadding} />
-      </ScrollView>
-    </SafeAreaView>
-  );
-};
+      console.log('✅ PIN removed successfully for user:', userId);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ PIN removal failed for user:', userId, error);
+      return { success: false, error: error.message };
+    }
+  }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#05212a',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1f2937',
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  placeholder: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#9ca3af',
-    marginTop: 16,
-    fontSize: 16,
-  },
-  section: {
-    marginBottom: 32,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginLeft: 12,
-    flex: 1,
-  },
-  sectionDescription: {
-    fontSize: 14,
-    color: '#9ca3af',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  enabledBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  disabledBadge: {
-    backgroundColor: 'rgba(107, 114, 128, 0.2)',
-  },
-  statusBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  enabledText: {
-    color: '#10b981',
-  },
-  disabledText: {
-    color: '#6b7280',
-  },
-  
-  // Score Card
-  scoreCard: {
-    backgroundColor: '#1f2937',
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  scoreCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#374151',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 20,
-  },
-  scoreNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  scoreLabel: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginTop: -4,
-  },
-  scoreInfo: {
-    flex: 1,
-  },
-  scoreStatus: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  scoreDescription: {
-    fontSize: 14,
-    color: '#9ca3af',
-    lineHeight: 20,
-  },
+  // Failed attempts management for specific user - FIXED VERSION
+  async getFailedAttempts(userId) {
+    try {
+      if (!userId) return 0;
+      
+      const attemptsKey = this.getUserSpecificKey(this.FAILED_ATTEMPTS_KEY_BASE, userId);
+      const attempts = await SecureStore.getItemAsync(attemptsKey);
+      return parseInt(attempts) || 0;
+    } catch (error) {
+      return 0;
+    }
+  }
 
-  // Warning Card
-  warningCard: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderWidth: 1,
-    borderColor: '#f59e0b',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#f59e0b',
-    marginLeft: 12,
-    fontWeight: '500',
-  },
+  async incrementFailedAttempts(userId) {
+    try {
+      if (!userId) return;
+      
+      const attemptsKey = this.getUserSpecificKey(this.FAILED_ATTEMPTS_KEY_BASE, userId);
+      const current = await this.getFailedAttempts(userId);
+      await SecureStore.setItemAsync(attemptsKey, (current + 1).toString());
+    } catch (error) {
+      console.error('Increment failed attempts error for user:', userId, error);
+    }
+  }
 
-  // Options Container
-  optionsContainer: {
-    backgroundColor: '#1f2937',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#374151',
-  },
-  dangerOption: {
-    borderBottomWidth: 0,
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#ffffff',
-    marginLeft: 12,
-    flex: 1,
-  },
-  dangerText: {
-    color: '#ef4444',
-  },
+  async resetFailedAttempts(userId) {
+    try {
+      if (!userId) return;
+      
+      const attemptsKey = this.getUserSpecificKey(this.FAILED_ATTEMPTS_KEY_BASE, userId);
+      const lockoutKey = this.getUserSpecificKey(this.LOCKOUT_TIME_KEY_BASE, userId);
+      
+      await SecureStore.deleteItemAsync(attemptsKey);
+      await SecureStore.deleteItemAsync(lockoutKey);
+    } catch (error) {
+      console.error('Reset failed attempts error for user:', userId, error);
+    }
+  }
 
-  // Setup Button
-  setupButton: {
-    backgroundColor: '#98DDA6',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  setupButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  emergencyButton: {
-    backgroundColor: '#ef4444',
-  },
-  emergencyButtonText: {
-    color: '#ffffff',
-  },
+  // Lockout management for specific user - FIXED VERSION
+  async setLockout(userId) {
+    try {
+      if (!userId) return;
+      
+      const lockoutKey = this.getUserSpecificKey(this.LOCKOUT_TIME_KEY_BASE, userId);
+      const lockoutTime = Date.now() + this.LOCKOUT_DURATION;
+      await SecureStore.setItemAsync(lockoutKey, lockoutTime.toString());
+    } catch (error) {
+      console.error('Set lockout error for user:', userId, error);
+    }
+  }
 
-  // Toggle Container
-  toggleContainer: {
-    backgroundColor: '#1f2937',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-  },
-  toggleLabel: {
-    fontSize: 16,
-    color: '#ffffff',
-    flex: 1,
-  },
-  requirementText: {
-    fontSize: 12,
-    color: '#f59e0b',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
+  async checkLockout(userId) {
+    try {
+      if (!userId) {
+        return { allowed: true };
+      }
+      
+      const lockoutKey = this.getUserSpecificKey(this.LOCKOUT_TIME_KEY_BASE, userId);
+      const lockoutTimeStr = await SecureStore.getItemAsync(lockoutKey);
+      
+      if (!lockoutTimeStr) {
+        return { allowed: true };
+      }
 
-  // Status Container
-  statusContainer: {
-    backgroundColor: '#1f2937',
-    borderRadius: 12,
-    padding: 16,
-  },
-  statusItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#374151',
-  },
-  statusLabel: {
-    fontSize: 14,
-    color: '#9ca3af',
-  },
-  statusValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6b7280',
-  },
-  statusValueActive: {
-    color: '#10b981',
-  },
-  statusValueWarning: {
-    color: '#f59e0b',
-  },
+      const lockoutTime = parseInt(lockoutTimeStr);
+      const now = Date.now();
 
-  // Tips Container
-  tipsContainer: {
-    backgroundColor: '#1f2937',
-    borderRadius: 12,
-    padding: 16,
-  },
-  tip: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  tipText: {
-    fontSize: 14,
-    color: '#d1d5db',
-    marginLeft: 8,
-    flex: 1,
-    lineHeight: 20,
-  },
+      if (now < lockoutTime) {
+        return {
+          allowed: false,
+          remainingTime: lockoutTime - now
+        };
+      } else {
+        // Lockout expired, reset
+        await this.resetFailedAttempts(userId);
+        return { allowed: true };
+      }
+    } catch (error) {
+      console.error('Check lockout error for user:', userId, error);
+      return { allowed: true };
+    }
+  }
 
-  bottomPadding: {
-    height: 50,
-  },
-});
+  // Get security status for specific user - FIXED VERSION
+  async getSecurityStatus(userId) {
+    try {
+      if (!userId) {
+        return {
+          pinSetup: false,
+          failedAttempts: 0,
+          isLockedOut: false,
+          lockoutRemainingTime: 0
+        };
+      }
+
+      const isPinSetup = await this.isPinSetup(userId);
+      const failedAttempts = await this.getFailedAttempts(userId);
+      const lockoutCheck = await this.checkLockout(userId);
+
+      return {
+        pinSetup: isPinSetup,
+        failedAttempts,
+        isLockedOut: !lockoutCheck.allowed,
+        lockoutRemainingTime: lockoutCheck.remainingTime || 0
+      };
+    } catch (error) {
+      console.error('Get security status error for user:', userId, error);
+      return {
+        pinSetup: false,
+        failedAttempts: 0,
+        isLockedOut: false,
+        lockoutRemainingTime: 0
+      };
+    }
+  }
+
+  // Validate PIN format (unchanged)
+  validatePinFormat(pin) {
+    if (!pin) {
+      return { valid: false, error: 'PIN is required' };
+    }
+
+    if (pin.length !== 6) {
+      return { valid: false, error: 'PIN must be 6 digits' };
+    }
+
+    if (!/^\d{6}$/.test(pin)) {
+      return { valid: false, error: 'PIN must contain only numbers' };
+    }
+
+    // Check for common weak PINs
+    const weakPins = [
+      '000000', '111111', '222222', '333333', '444444', '555555',
+      '666666', '777777', '888888', '999999', '123456', '654321',
+      '123321', '112233', '121212'
+    ];
+
+    if (weakPins.includes(pin)) {
+      return { valid: false, error: 'Please choose a more secure PIN' };
+    }
+
+    return { valid: true };
+  }
+
+  // Emergency PIN reset for specific user - FIXED VERSION
+  async emergencyReset(userId = null) {
+    try {
+      console.log('🚨 Emergency PIN reset for user:', userId || 'ALL USERS');
+      
+      if (userId) {
+        // Reset for specific user
+        const pinKey = this.getUserSpecificKey(this.PIN_KEY_BASE, userId);
+        const saltKey = this.getUserSpecificKey(this.PIN_SALT_KEY_BASE, userId);
+        const setupKey = this.getUserSpecificKey(this.PIN_SETUP_KEY_BASE, userId);
+        
+        await SecureStore.deleteItemAsync(pinKey);
+        await SecureStore.deleteItemAsync(saltKey);
+        await SecureStore.deleteItemAsync(setupKey);
+        await this.resetFailedAttempts(userId);
+      } else {
+        // DANGEROUS: Reset for all users (development only)
+        // This is not practical in production as we don't know all user IDs
+        console.warn('⚠️ Emergency reset without user ID - limited functionality');
+        
+        // Try to clear common patterns (this won't get everything)
+        const commonKeys = [
+          'user_pin_hash', 'user_pin_salt', 'pin_setup_complete',
+          'pin_failed_attempts', 'pin_lockout_time'
+        ];
+        
+        for (const key of commonKeys) {
+          try {
+            await SecureStore.deleteItemAsync(key);
+          } catch (e) {
+            // Key might not exist, ignore
+          }
+        }
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Emergency reset error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Generate secure session token (unchanged)
+  async generateSessionToken() {
+    try {
+      const timestamp = Date.now().toString();
+      const randomBytes = await Crypto.getRandomBytesAsync(16);
+      const randomString = Array.from(randomBytes, byte => 
+        byte.toString(16).padStart(2, '0')
+      ).join('');
+      
+      const sessionData = `${timestamp}-${randomString}`;
+      return await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256, 
+        sessionData
+      );
+    } catch (error) {
+      console.error('Generate session token error:', error);
+      return null;
+    }
+  }
+
+  // Check if app requires PIN authentication for specific user - FIXED VERSION
+  async requiresPinAuth(userId) {
+    if (!userId) {
+      return {
+        required: false,
+        lockedOut: false,
+        remainingLockoutTime: 0
+      };
+    }
+
+    const isSetup = await this.isPinSetup(userId);
+    const lockoutCheck = await this.checkLockout(userId);
+    
+    return {
+      required: isSetup,
+      lockedOut: !lockoutCheck.allowed,
+      remainingLockoutTime: lockoutCheck.remainingTime || 0
+    };
+  }
+}
+
+export default new SecurityService();

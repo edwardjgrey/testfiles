@@ -1,4 +1,4 @@
-// src/components/auth/PinSetup.js - PIN SETUP for NEW USERS
+// src/components/auth/PinSetup.js - FIXED VERSION with proper user ID handling
 import React, { useState } from 'react';
 import {
   View,
@@ -138,7 +138,11 @@ const PinSetup = ({ language, onComplete, user }) => {
 
   const verifyAndSetupPin = async (enteredPin, confirmedPin) => {
     try {
-      console.log('🔐 Setting up PIN for new user');
+      console.log('🔐 Setting up PIN for user:', user?.id);
+      
+      if (!user || !user.id) {
+        throw new Error('User information is missing');
+      }
       
       // Check if PINs match
       if (enteredPin !== confirmedPin) {
@@ -161,10 +165,15 @@ const PinSetup = ({ language, onComplete, user }) => {
 
       setLoading(true);
       
-      // Setup PIN using SecurityService
+      // Ensure SecurityService has the correct user ID
+      SecurityService.setCurrentUser(user.id);
+      console.log('🔐 SecurityService user set to:', user.id);
+      
+      // Setup PIN using SecurityService with explicit user ID
       const result = await SecurityService.setupPin(enteredPin, user.id);
       
       if (result.success) {
+        console.log('✅ PIN setup successful for user:', user.id);
         Alert.alert(
           'Success!',
           getText('pinSetupSuccess'),
@@ -177,6 +186,7 @@ const PinSetup = ({ language, onComplete, user }) => {
           }]
         );
       } else {
+        console.error('❌ PIN setup failed:', result.error);
         shakeError();
         setPin('');
         setConfirmPin('');
@@ -205,7 +215,7 @@ const PinSetup = ({ language, onComplete, user }) => {
           text: 'Skip', 
           style: 'destructive',
           onPress: () => {
-            console.log('⏭️ User skipped PIN setup');
+            console.log('⏭️ User skipped PIN setup for user:', user?.id);
             onComplete();
           }
         }
@@ -344,6 +354,16 @@ const PinSetup = ({ language, onComplete, user }) => {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#98DDA6" />
             <Text style={styles.loadingText}>{getText('completing')}</Text>
+          </View>
+        )}
+
+        {/* Debug Info */}
+        {__DEV__ && (
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugText}>Debug: User ID: {user?.id || 'MISSING'}</Text>
+            <Text style={styles.debugText}>Step: {step}</Text>
+            <Text style={styles.debugText}>PIN: {pin}</Text>
+            <Text style={styles.debugText}>Confirm: {confirmPin}</Text>
           </View>
         )}
       </Animated.View>
@@ -520,6 +540,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
   },
+  debugContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  debugText: {
+    color: '#9ca3af',
+    fontSize: 12,
+    marginBottom: 2,
+  },
 });
-
-export default PinSetup;
