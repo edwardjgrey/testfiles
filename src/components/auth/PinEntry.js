@@ -1,4 +1,4 @@
-// src/components/auth/PinEntry.js - FIXED VERSION with proper user ID handling
+// src/components/auth/PinEntry.js - FIXED VERSION with proper export
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -566,4 +566,5 @@ const styles = StyleSheet.create({
   },
 });
 
+// IMPORTANT: Use export default
 export default PinEntry;

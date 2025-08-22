@@ -206,19 +206,29 @@ export const globalStyles = StyleSheet.create({
     fontWeight: '700',
   },
   
-  // Back Button
+  // Back Button for light backgrounds
   backButton: {
     padding: 8,
     marginBottom: 20,
-    marginTop: 50, // Back to original position since no language selector
+    marginTop: 50,
     alignSelf: 'flex-start',
     borderRadius: 8,
+  },
+  
+  // Back Button for dark backgrounds
+  backButtonDark: {
+    padding: 8,
+    marginBottom: 20,
+    marginTop: 50,
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   
   // Language Selector
   languageContainer: {
     position: 'absolute',
-    top: 30, // Moved up from 50
+    top: 30,
     right: 20,
     zIndex: 1000,
   },
@@ -440,39 +450,39 @@ export const globalStyles = StyleSheet.create({
   
   // Plans
   plansContainer: {
-    marginBottom: 30, // Increased from 20
-    gap: 20, // Added gap between plan cards
+    marginBottom: 30,
+    gap: 20,
   },
   
   planCard: {
     borderWidth: 2,
     borderColor: colors.authStroke,
-    borderRadius: 20, // Increased from 16 for softer look
-    padding: responsiveWidth(6), // Increased from 5
-    marginBottom: 20, // Increased from 12
+    borderRadius: 20,
+    padding: responsiveWidth(6),
+    marginBottom: 20,
     position: 'relative',
     backgroundColor: 'white',
-    marginHorizontal: responsiveWidth(2), // Added horizontal margin
+    marginHorizontal: responsiveWidth(2),
   },
   
   planCardSelected: {
     borderColor: colors.primary,
     backgroundColor: '#f0fdf4',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 }, // Increased shadow
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
-    shadowRadius: 16, // Increased shadow radius
-    elevation: 8, // Increased elevation
+    shadowRadius: 16,
+    elevation: 8,
   },
   
   popularBadge: {
     position: 'absolute',
-    top: -12, // Moved up slightly
+    top: -12,
     alignSelf: 'center',
     backgroundColor: '#7c3aed',
-    paddingHorizontal: 20, // Increased from 16
-    paddingVertical: 6, // Increased from 4
-    borderRadius: 15, // Increased from 12
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    borderRadius: 15,
     shadowColor: '#7c3aed',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -483,53 +493,53 @@ export const globalStyles = StyleSheet.create({
   popularBadgeText: {
     color: 'white',
     fontSize: responsiveFontSize(12),
-    fontWeight: '700', // Increased from 600
+    fontWeight: '700',
   },
   
   planHeader: {
-    marginBottom: 20, // Increased from 16
-    marginTop: 8, // Added top margin for popular badge spacing
+    marginBottom: 20,
+    marginTop: 8,
   },
   
   planName: {
-    fontSize: responsiveFontSize(22), // Increased from 20
-    fontWeight: '800', // Increased from 700
+    fontSize: responsiveFontSize(22),
+    fontWeight: '800',
     color: colors.authText,
-    marginBottom: 12, // Increased from 8
+    marginBottom: 12,
   },
   
   planPrice: {
-    fontSize: responsiveFontSize(28), // Increased from 24
-    fontWeight: '900', // Increased from 800
+    fontSize: responsiveFontSize(28),
+    fontWeight: '900',
     color: colors.authText,
     lineHeight: responsiveFontSize(32),
   },
   
   planPeriod: {
-    fontSize: responsiveFontSize(15), // Increased from 14
+    fontSize: responsiveFontSize(15),
     color: colors.authTextDim,
-    fontWeight: '500', // Increased from 400
+    fontWeight: '500',
   },
   
   planFeatures: {
-    marginBottom: 20, // Increased from 16
-    gap: 12, // Added gap between features
+    marginBottom: 20,
+    gap: 12,
   },
   
   planFeature: {
     flexDirection: 'row',
-    alignItems: 'flex-start', // Changed from center for better text alignment
-    gap: 12, // Increased from 8
-    marginBottom: 12, // Increased from 8
-    paddingVertical: 2, // Added vertical padding
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 12,
+    paddingVertical: 2,
   },
   
   planFeatureText: {
-    fontSize: responsiveFontSize(15), // Increased from 14
+    fontSize: responsiveFontSize(15),
     color: colors.authText,
     flex: 1,
-    lineHeight: responsiveFontSize(20), // Added line height
-    marginTop: -2, // Slight adjustment for icon alignment
+    lineHeight: responsiveFontSize(20),
+    marginTop: -2,
   },
   
   // Divider

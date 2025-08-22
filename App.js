@@ -1,7 +1,8 @@
-// App.js - FIXED VERSION with proper user ID for PIN operations
+// App.js - FIXED VERSION with proper imports
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Alert, View, Text, ActivityIndicator, SafeAreaView } from 'react-native';
+import { Alert, View, Text, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 // Import components
 import OnboardingFlow from './src/components/onboarding/OnboardingFlow';
@@ -645,22 +646,24 @@ export default function App() {
   // Loading screen
   if (isLoading) {
     return (
-      <SafeAreaView style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#05212A'
-      }}>
-        <ActivityIndicator size="large" color="#98DDA6" />
-        <Text style={{
-          marginTop: 16,
-          fontSize: 16,
-          color: '#9ca3af',
-          textAlign: 'center'
+      <SafeAreaProvider>
+        <SafeAreaView style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#05212A'
         }}>
-          {isAuthenticated ? 'Setting up your account...' : 'Loading Akchabar...'}
-        </Text>
-      </SafeAreaView>
+          <ActivityIndicator size="large" color="#98DDA6" />
+          <Text style={{
+            marginTop: 16,
+            fontSize: 16,
+            color: '#9ca3af',
+            textAlign: 'center'
+          }}>
+            {isAuthenticated ? 'Setting up your account...' : 'Loading Akchabar...'}
+          </Text>
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
@@ -738,9 +741,11 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <StatusBar style="auto" />
-      {renderScreen()}
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1 }}>
+        <StatusBar style="auto" />
+        {renderScreen()}
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }

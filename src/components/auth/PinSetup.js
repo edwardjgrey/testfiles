@@ -1,4 +1,4 @@
-// src/components/auth/PinSetup.js - FIXED VERSION with proper user ID handling
+// src/components/auth/PinSetup.js - FIXED VERSION with proper export
 import React, { useState } from 'react';
 import {
   View,
@@ -552,3 +552,6 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
 });
+
+// IMPORTANT: Use export default
+export default PinSetup;

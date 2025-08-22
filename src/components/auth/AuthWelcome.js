@@ -1,4 +1,4 @@
-// Updated AuthWelcome.js - Handle all auth methods universally
+// Fixed AuthWelcome.js - Remove SafeAreaProvider usage
 import React, { useState } from 'react';
 import {
   View,
@@ -97,16 +97,14 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
 
   if (loading) {
     return (
-      <SafeAreaProvider>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f7f8fb' }}>
-          <ActivityIndicator size="large" color="#98DDA6" />
-          <Text style={{ marginTop: 16, color: '#6b7280' }}>
-            {language === 'ru' ? 'Аутентификация...' : 
-             language === 'ky' ? 'Аутентификация...' : 
-             'Authenticating...'}
-          </Text>
-        </View>
-      </SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f7f8fb' }}>
+        <ActivityIndicator size="large" color="#98DDA6" />
+        <Text style={{ marginTop: 16, color: '#6b7280' }}>
+          {language === 'ru' ? 'Аутентификация...' : 
+           language === 'ky' ? 'Аутентификация...' : 
+           'Authenticating...'}
+        </Text>
+      </SafeAreaView>
     );
   }
 
