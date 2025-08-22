@@ -1,3 +1,4 @@
+// src/styles/globalStyles.js - FIXED FORMAT ISSUES
 import { StyleSheet, Dimensions } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -44,15 +45,17 @@ export const globalStyles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   
+  // FIXED: Better scroll content handling to prevent pushing down
   scrollContent: {
     padding: responsiveWidth(5),
+    paddingTop: responsiveHeight(2), // Reduced from 5 to 2
     minHeight: height - 100,
-    justifyContent: 'center',
+    justifyContent: 'flex-start', // Changed from center to flex-start
   },
   
   mainContent: {
     padding: responsiveWidth(5),
-    paddingTop: responsiveHeight(5),
+    paddingTop: responsiveHeight(3), // Reduced from 5 to 3
   },
   
   authCard: {
@@ -206,11 +209,11 @@ export const globalStyles = StyleSheet.create({
     fontWeight: '700',
   },
   
-  // Back Button for light backgrounds
+  // FIXED: Back Button - consistent across all screens
   backButton: {
     padding: 8,
     marginBottom: 20,
-    marginTop: 50,
+    marginTop: 50, // Consistent positioning
     alignSelf: 'flex-start',
     borderRadius: 8,
   },
@@ -225,10 +228,10 @@ export const globalStyles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   
-  // Language Selector
+  // FIXED: Language Selector positioning
   languageContainer: {
     position: 'absolute',
-    top: 30,
+    top: 50, // Moved down from 30 to avoid overlap
     right: 20,
     zIndex: 1000,
   },

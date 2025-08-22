@@ -251,14 +251,14 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
 
   // Handle opening external links
   const openTerms = () => {
-    const termsUrl = 'https://akchabar.com/terms'; // Replace with your actual Terms URL
+    const termsUrl = 'https://akchabar.com/terms';
     Linking.openURL(termsUrl).catch(err => 
       Alert.alert('Error', 'Could not open Terms of Service')
     );
   };
 
   const openPrivacy = () => {
-    const privacyUrl = 'https://akchabar.com/privacy'; // Replace with your actual Privacy URL
+    const privacyUrl = 'https://akchabar.com/privacy';
     Linking.openURL(privacyUrl).catch(err => 
       Alert.alert('Error', 'Could not open Privacy Policy')
     );
@@ -436,7 +436,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
         ]}
         extraScrollHeight={50}
       >
-        {/* Consistent back button - FIXED to match other screens */}
+        {/* FIXED: Consistent back button to match other auth screens */}
         <TouchableOpacity
           style={globalStyles.backButton}
           onPress={() => navigateAuth('welcome')}
@@ -444,11 +444,11 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
           <Ionicons name="arrow-back" size={22} color="#0f172a" />
         </TouchableOpacity>
         
-        {/* Consistent title - FIXED */}
-        <Text style={globalStyles.authTitleLeft}>
+        {/* FIXED: Consistent title styling */}
+        <Text style={[globalStyles.authTitleLeft, { color: '#0f172a' }]}>
           {t.signIn}
         </Text>
-        <Text style={globalStyles.authSubtitleLeft}>
+        <Text style={[globalStyles.authSubtitleLeft, { color: '#6b7280' }]}>
           {t.welcomeBackSub}
         </Text>
 

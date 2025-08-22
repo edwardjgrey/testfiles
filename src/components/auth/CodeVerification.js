@@ -1,4 +1,4 @@
-// src/components/auth/CodeVerification.js - COMPLETE FILE
+// src/components/auth/CodeVerification.js - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -27,14 +27,6 @@ const CodeVerification = ({ authData, language, setLanguage, navigateAuth, handl
   // Clean phone number for display and processing
   const cleanPhone = authData.phone ? authData.phone.replace(/\s/g, '') : '';
   const displayPhone = `${authData.countryCode} ${authData.phone}`;
-  
-  console.log('🔧 CodeVerification initialized:', {
-    isSignIn,
-    originalPhone: authData.phone,
-    cleanPhone,
-    displayPhone,
-    authData
-  });
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -52,32 +44,20 @@ const CodeVerification = ({ authData, language, setLanguage, navigateAuth, handl
     setLoading(true);
     
     try {
-      console.log('🔓 Starting verification process:', {
-        code,
-        isSignIn,
-        phone: cleanPhone,
-        countryCode: authData.countryCode
-      });
-      
       // Use the enhanced verification handler from App.js
       if (handleCodeVerification) {
-        console.log('✅ Using enhanced verification handler');
         await handleCodeVerification(code);
       } else {
-        console.log('⚠️ Fallback verification method');
         // Fallback to old method
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         if (isSignIn) {
-          console.log('🔓 Sign-in verification completed (fallback)');
           // This would typically call completeAuth with user data
         } else {
-          console.log('🔓 Registration verification - proceeding to profile (fallback)');
           navigateAuth('profile', { verificationCode: code });
         }
       }
     } catch (error) {
-      console.error('❌ Verification failed:', error);
       Alert.alert('Verification Error', error.message || 'Verification failed');
     } finally {
       setLoading(false);
@@ -87,12 +67,6 @@ const CodeVerification = ({ authData, language, setLanguage, navigateAuth, handl
   const handleResendCode = () => {
     // Reset timer
     setResendTimer(60);
-    
-    console.log('📱 Resending verification code for:', {
-      isSignIn,
-      phone: cleanPhone,
-      countryCode: authData.countryCode
-    });
     
     if (isSignIn) {
       Alert.alert(
@@ -110,8 +84,6 @@ const CodeVerification = ({ authData, language, setLanguage, navigateAuth, handl
   };
 
   const handleGoBack = () => {
-    console.log('🔙 Going back from verification:', { isSignIn });
-    
     if (isSignIn) {
       // Go back to sign-in form for sign-in flow
       navigateAuth('signin-form');
@@ -126,7 +98,7 @@ const CodeVerification = ({ authData, language, setLanguage, navigateAuth, handl
       <StatusBar barStyle="light-content" backgroundColor={globalStyles.authContainer.backgroundColor} />
       <LanguageSelector language={language} setLanguage={setLanguage} />
       <ScrollView contentContainerStyle={globalStyles.scrollContent}>
-        {/* Consistent back button with smart behavior */}
+        {/* Fixed back button to match other screens */}
         <TouchableOpacity
           style={globalStyles.backButton}
           onPress={handleGoBack}
@@ -251,26 +223,6 @@ const CodeVerification = ({ authData, language, setLanguage, navigateAuth, handl
             </Text>
           )}
         </View>
-
-        {/* Debug info (remove in production) */}
-        {__DEV__ && (
-          <View style={{
-            backgroundColor: '#f3f4f6',
-            padding: 12,
-            borderRadius: 8,
-            marginTop: 20,
-          }}>
-            <Text style={{ fontSize: 12, color: '#6b7280' }}>
-              Debug: Original phone: {authData.phone}
-            </Text>
-            <Text style={{ fontSize: 12, color: '#6b7280' }}>
-              Debug: Clean phone: {cleanPhone}
-            </Text>
-            <Text style={{ fontSize: 12, color: '#6b7280' }}>
-              Debug: Is sign-in: {isSignIn ? 'Yes' : 'No'}
-            </Text>
-          </View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
