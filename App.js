@@ -1,4 +1,4 @@
-// App.js - UPDATED with PIN Security Flow
+// App.js - COMPLETE FIXED VERSION with PIN Security Flow
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -157,7 +157,7 @@ export default function App() {
     }
   };
 
-  // Check if user needs to setup PIN or authenticate with PIN
+  // Check if user needs to setup PIN or authenticate with PIN - FIXED VERSION
   const checkSecuritySetup = async () => {
     try {
       console.log('🔒 Checking security setup status...');
@@ -168,9 +168,11 @@ export default function App() {
       if (!securityStatus.pinSetup) {
         console.log('📌 PIN setup required for new user');
         setPinSetupRequired(true);
+        setPinAuthRequired(false);
         setSecuritySetupComplete(false);
       } else if (securityStatus.isLockedOut) {
         console.log('🔒 Account is locked out');
+        setPinSetupRequired(false);
         setPinAuthRequired(true);
         setSecuritySetupComplete(false);
       } else {
@@ -178,31 +180,38 @@ export default function App() {
         const pinAuthNeeded = await SecurityService.requiresPinAuth();
         if (pinAuthNeeded.required) {
           console.log('🔑 PIN authentication required');
+          setPinSetupRequired(false);
           setPinAuthRequired(true);
           setSecuritySetupComplete(false);
         } else {
           console.log('✅ Security setup complete');
+          setPinSetupRequired(false);
+          setPinAuthRequired(false);
           setSecuritySetupComplete(true);
         }
       }
     } catch (error) {
       console.error('❌ Security check failed:', error);
       // If security check fails, require PIN setup for safety
+      console.log('⚠️ Security check failed, requiring PIN setup');
       setPinSetupRequired(true);
+      setPinAuthRequired(false);
       setSecuritySetupComplete(false);
     }
   };
 
-  // Handle successful PIN setup
+  // Handle successful PIN setup - FIXED VERSION
   const handlePinSetupComplete = async () => {
     console.log('✅ PIN setup completed');
     setPinSetupRequired(false);
+    setPinAuthRequired(false);
     setSecuritySetupComplete(true);
   };
 
-  // Handle successful PIN authentication
+  // Handle successful PIN authentication - FIXED VERSION
   const handlePinAuthSuccess = async () => {
     console.log('✅ PIN authentication successful');
+    setPinSetupRequired(false);
     setPinAuthRequired(false);
     setSecuritySetupComplete(true);
   };
@@ -475,7 +484,7 @@ export default function App() {
     }
   };
 
-  // Complete authentication
+  // Complete authentication - FIXED VERSION
   const completeAuth = async (userData = null) => {
     try {
       console.log('🚀 Starting completeAuth...');
@@ -521,13 +530,15 @@ export default function App() {
         setUser(response.user);
         setIsAuthenticated(true);
         
-        // New users need PIN setup
+        // NEW USERS need PIN setup - set the correct flags
+        console.log('🔐 New user - requiring PIN setup');
         setPinSetupRequired(true);
+        setPinAuthRequired(false);
         setSecuritySetupComplete(false);
         
         Alert.alert(
           'Welcome to Akchabar!', 
-          `Your ${authData.authMethod} account has been created successfully!`
+          `Your ${authData.authMethod} account has been created successfully! Next, let's secure your account with a PIN.`
         );
       } else {
         console.error('❌ Registration failed:', response);
@@ -630,7 +641,7 @@ export default function App() {
     );
   }
 
-  // Render screens with security flow
+  // Render screens with security flow - FIXED VERSION
   const renderScreen = () => {
     if (!hasSeenOnboarding) {
       return (
@@ -642,8 +653,9 @@ export default function App() {
       );
     }
 
-    // If user is authenticated but needs PIN setup
-    if (isAuthenticated && user && pinSetupRequired) {
+    // If user is authenticated but needs PIN setup (NEW USERS)
+    if (isAuthenticated && user && pinSetupRequired && !pinAuthRequired) {
+      console.log('🔄 Rendering PIN setup for new user');
       return (
         <PinSetup
           language={language}
@@ -653,8 +665,9 @@ export default function App() {
       );
     }
 
-    // If user is authenticated but needs PIN authentication
-    if (isAuthenticated && user && pinAuthRequired) {
+    // If user is authenticated but needs PIN authentication (EXISTING USERS)
+    if (isAuthenticated && user && pinAuthRequired && !pinSetupRequired) {
+      console.log('🔄 Rendering PIN entry for existing user');
       return (
         <PinEntry
           language={language}
@@ -666,7 +679,8 @@ export default function App() {
     }
 
     // If user is fully authenticated and security setup is complete
-    if (isAuthenticated && user && securitySetupComplete) {
+    if (isAuthenticated && user && securitySetupComplete && !pinSetupRequired && !pinAuthRequired) {
+      console.log('🔄 Rendering main app');
       return (
         <MainApp 
           authData={user} 
@@ -676,7 +690,8 @@ export default function App() {
       );
     }
 
-    // Authentication flow
+    // Authentication flow (not authenticated yet)
+    console.log('🔄 Rendering auth flow, current view:', currentAuthView);
     switch (currentAuthView) {
       case 'welcome':
         return <AuthWelcome {...authProps} />;
