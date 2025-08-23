@@ -1,4 +1,4 @@
-// src/styles/globalStyles.js - UPDATED with responsive fixes and new auth theme
+// src/styles/globalStyles.js - FIXED with proper dark theme and StatusBar
 import { StyleSheet, Dimensions, StatusBar, Platform } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -16,17 +16,17 @@ export const colors = {
   primary: '#98DDA6',
   primaryDark: '#7bc496',
   background: '#05212A',
-  cardBackground: '#0a2f3a',
+  cardBackground: '#1f2937',
   text: '#ffffff',
   textDim: '#9ca3af',
   border: '#374151',
   
-  // UPDATED: Auth colors to match main app theme
-  authBg: '#05212A', // Changed from '#f7f8fb' to match main app
-  authCard: '#1f2937', // Changed from '#ffffff' to match main app cards
-  authText: '#ffffff', // Changed from '#0f172a' to white
-  authTextDim: '#9ca3af', // Slightly updated for better contrast
-  authStroke: '#374151', // Changed from '#e5e7eb' to match main app borders
+  // FIXED: Auth colors properly configured for dark theme
+  authBg: '#05212A',
+  authCard: '#1f2937',
+  authText: '#ffffff', // FIXED: White text for dark theme
+  authTextDim: '#9ca3af',
+  authStroke: '#374151',
   
   success: '#16a34a',
   danger: '#dc2626',
@@ -34,15 +34,15 @@ export const colors = {
   info: '#3b82f6',
   google: '#111111',
   apple: '#000000',
-  secondary: '#374151', // Updated to match new theme
+  secondary: '#374151',
 };
 
 export const globalStyles = StyleSheet.create({
-  // FIXED: Auth Container with proper padding and responsive layout
+  // FIXED: Auth Container with proper dark theme and no white lines
   authContainer: {
     flex: 1,
-    backgroundColor: colors.authBg,
-    paddingTop: statusBarHeight, // Proper status bar handling
+    backgroundColor: colors.authBg, // Dark background
+    // REMOVED: paddingTop that was causing white lines
   },
   
   mainContainer: {
@@ -50,45 +50,46 @@ export const globalStyles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   
-  // FIXED: Responsive scroll content with proper padding
+  // FIXED: Proper scroll content without white space issues
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: responsiveWidth(5),
-    paddingTop: responsiveHeight(2), // Reduced top padding
-    paddingBottom: responsiveHeight(5),
-    minHeight: height - statusBarHeight - 100, // Account for status bar
-    justifyContent: 'flex-start', // Changed from 'center' to prevent pushing content down
+    paddingTop: 20, // Reduced and simplified
+    paddingBottom: responsiveHeight(3),
   },
   
   mainContent: {
     padding: responsiveWidth(5),
-    paddingTop: responsiveHeight(3), // Reduced from 5%
+    paddingTop: responsiveHeight(3),
   },
   
-  // UPDATED: Auth card with new theme colors
+  // FIXED: Auth card with proper dark theme colors
   authCard: {
-    backgroundColor: colors.authCard,
+    backgroundColor: colors.authCard, // Dark card background
     borderRadius: 20,
     padding: responsiveWidth(6),
-    marginVertical: 8, // Increased margin
+    marginVertical: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, // Increased for dark theme
+    shadowOpacity: 0.3,
     shadowRadius: 12,
-    elevation: 8, // Increased for Android
+    elevation: 8,
     width: '100%',
     maxWidth: responsiveWidth(90),
     alignSelf: 'center',
     borderWidth: 1,
-    borderColor: colors.border, // Added border for dark theme
+    borderColor: colors.border,
   },
   
   signInCard: {
     alignItems: 'center',
-    marginTop: 16, // Added top margin
+    marginTop: 16,
+    backgroundColor: colors.authCard,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   
-  // UPDATED: Logo with new theme
+  // Logo wrapper with proper theme
   logoWrap: {
     width: responsiveWidth(22),
     height: responsiveWidth(22),
@@ -97,7 +98,7 @@ export const globalStyles = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20, // Increased margin
+    marginBottom: 20,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -105,22 +106,22 @@ export const globalStyles = StyleSheet.create({
     elevation: 6,
   },
   
-  // UPDATED: Typography with new colors
+  // FIXED: Typography with proper white colors for dark theme
   authTitle: {
     fontSize: responsiveFontSize(26),
     fontWeight: '800',
-    color: colors.authText,
+    color: '#ffffff', // FIXED: White text
     textAlign: 'center',
-    marginBottom: 12, // Increased margin
+    marginBottom: 12,
     lineHeight: responsiveFontSize(32),
   },
   
   authTitleLeft: {
     fontSize: responsiveFontSize(26),
     fontWeight: '800',
-    color: colors.authText,
-    marginBottom: 12, // Increased margin
-    marginTop: 16, // Increased margin
+    color: '#ffffff', // FIXED: White text
+    marginBottom: 12,
+    marginTop: 16,
     lineHeight: responsiveFontSize(32),
   },
   
@@ -128,21 +129,21 @@ export const globalStyles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     color: colors.authTextDim,
     textAlign: 'center',
-    marginBottom: 20, // Increased margin
+    marginBottom: 20,
     lineHeight: responsiveFontSize(20),
   },
   
   authSubtitleLeft: {
     fontSize: responsiveFontSize(14),
     color: colors.authTextDim,
-    marginBottom: 24, // Increased margin
+    marginBottom: 24,
     lineHeight: responsiveFontSize(20),
   },
   
   footerText: {
     textAlign: 'center',
     color: colors.authTextDim,
-    marginTop: 20, // Increased margin
+    marginTop: 20,
     fontSize: responsiveFontSize(14),
     lineHeight: responsiveFontSize(20),
   },
@@ -158,7 +159,7 @@ export const globalStyles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   
-  // UPDATED: Button styles with new theme
+  // Button styles with proper dark theme
   pill: {
     height: responsiveHeight(7),
     borderRadius: responsiveHeight(3.5),
@@ -221,32 +222,32 @@ export const globalStyles = StyleSheet.create({
     fontWeight: '700',
   },
   
-  // FIXED: Back button alignment
+  // FIXED: Back button with proper dark theme
   backButton: {
-    padding: 12, // Increased padding
-    marginBottom: 16, // Reduced margin
-    marginTop: 8, // Reduced margin
+    padding: 12,
+    marginBottom: 16,
+    marginTop: 8,
     alignSelf: 'flex-start',
-    borderRadius: 12, // Increased border radius
-    backgroundColor: colors.authCard,
+    borderRadius: 12,
+    backgroundColor: 'rgba(152, 221, 166, 0.1)', // Semi-transparent primary color
     borderWidth: 1,
     borderColor: colors.border,
-    minWidth: 44, // Minimum touch target
+    minWidth: 44,
     minHeight: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
   
-  // Language Selector (keeping existing position)
+  // Language Selector with proper positioning
   languageContainer: {
     position: 'absolute',
-    top: statusBarHeight + 10,
+    top: Platform.OS === 'ios' ? 50 : 30,
     right: 20,
     zIndex: 1000,
   },
   
   languageButton: {
-    backgroundColor: colors.authCard,
+    backgroundColor: 'rgba(152, 221, 166, 0.1)',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
@@ -263,14 +264,14 @@ export const globalStyles = StyleSheet.create({
   
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)', // Darker overlay
+    backgroundColor: 'rgba(0,0,0,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   
   languageModal: {
     backgroundColor: colors.authCard,
-    borderRadius: 12, // Increased border radius
+    borderRadius: 12,
     padding: 10,
     minWidth: 140,
     margin: 20,
@@ -279,12 +280,12 @@ export const globalStyles = StyleSheet.create({
   },
   
   languageOption: {
-    padding: 12, // Increased padding
+    padding: 12,
     borderRadius: 8,
   },
   
   selectedLanguage: {
-    backgroundColor: colors.primary + '20', // Semi-transparent primary
+    backgroundColor: colors.primary + '20',
   },
   
   languageOptionText: {
@@ -292,14 +293,14 @@ export const globalStyles = StyleSheet.create({
     color: colors.authText,
   },
   
-  // UPDATED: Form styles with new theme
+  // FIXED: Form styles with dark theme
   formGroup: {
-    marginBottom: 20, // Increased margin
+    marginBottom: 20,
   },
   
   formLabel: {
-    color: colors.authTextDim,
-    marginBottom: 8, // Increased margin
+    color: colors.authText, // FIXED: White labels
+    marginBottom: 8,
     fontSize: responsiveFontSize(14),
     fontWeight: '500',
   },
@@ -308,7 +309,7 @@ export const globalStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
-    padding: 16, // Increased padding
+    padding: 16,
     backgroundColor: colors.background,
     fontSize: responsiveFontSize(16),
     color: colors.authText,
@@ -325,7 +326,7 @@ export const globalStyles = StyleSheet.create({
     elevation: 3,
   },
   
-  // UPDATED: Phone input with new theme
+  // Phone input with dark theme
   phoneInputContainer: {
     flexDirection: 'row',
     borderWidth: 1,
@@ -365,7 +366,7 @@ export const globalStyles = StyleSheet.create({
     paddingVertical: 16,
   },
   
-  // UPDATED: Verification input with new theme
+  // Verification input with dark theme
   verificationInput: {
     height: responsiveHeight(7),
     borderWidth: 1,
@@ -395,7 +396,7 @@ export const globalStyles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
   },
   
-  // UPDATED: Country modal with new theme
+  // Country modal with dark theme
   countryModal: {
     backgroundColor: colors.authCard,
     borderRadius: 12,
@@ -426,10 +427,10 @@ export const globalStyles = StyleSheet.create({
     color: colors.authText,
   },
   
-  // UPDATED: Profile picture with new theme
+  // Profile picture with dark theme
   profilePicSection: {
     alignItems: 'center',
-    marginBottom: 28, // Increased margin
+    marginBottom: 28,
   },
   
   profilePicContainer: {
@@ -469,21 +470,21 @@ export const globalStyles = StyleSheet.create({
     borderColor: colors.background,
   },
   
-  // UPDATED: Plan styles with new theme and better spacing
+  // Plan styles with dark theme
   plansContainer: {
     marginBottom: 30,
-    gap: 16, // Reduced gap for better fit
+    gap: 16,
   },
   
   planCard: {
     borderWidth: 2,
     borderColor: colors.border,
     borderRadius: 20,
-    padding: responsiveWidth(5), // Reduced padding slightly
+    padding: responsiveWidth(5),
     marginBottom: 16,
     position: 'relative',
     backgroundColor: colors.authCard,
-    marginHorizontal: 0, // Removed horizontal margin
+    marginHorizontal: 0,
   },
   
   planCardSelected: {
@@ -518,21 +519,21 @@ export const globalStyles = StyleSheet.create({
   },
   
   planHeader: {
-    marginBottom: 16, // Reduced margin
+    marginBottom: 16,
     marginTop: 8,
   },
   
   planName: {
-    fontSize: responsiveFontSize(20), // Reduced from 22
+    fontSize: responsiveFontSize(20),
     fontWeight: '800',
-    color: colors.authText,
-    marginBottom: 10, // Reduced margin
+    color: colors.authText, // FIXED: White text
+    marginBottom: 10,
   },
   
   planPrice: {
-    fontSize: responsiveFontSize(24), // Reduced from 28
+    fontSize: responsiveFontSize(24),
     fontWeight: '900',
-    color: colors.authText,
+    color: colors.authText, // FIXED: White text
     lineHeight: responsiveFontSize(28),
   },
   
@@ -543,27 +544,27 @@ export const globalStyles = StyleSheet.create({
   },
   
   planFeatures: {
-    marginBottom: 16, // Reduced margin
-    gap: 8, // Reduced gap
+    marginBottom: 16,
+    gap: 8,
   },
   
   planFeature: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10, // Reduced gap
-    marginBottom: 8, // Reduced margin
+    gap: 10,
+    marginBottom: 8,
     paddingVertical: 2,
   },
   
   planFeatureText: {
     fontSize: responsiveFontSize(14),
-    color: colors.authText,
+    color: colors.authText, // FIXED: White text
     flex: 1,
-    lineHeight: responsiveFontSize(18), // Reduced line height
+    lineHeight: responsiveFontSize(18),
     marginTop: -2,
   },
   
-  // Divider styles remain the same but updated colors
+  // Divider styles with dark theme colors
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -582,7 +583,7 @@ export const globalStyles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
   },
   
-  // Add responsive design helpers at the end
+  // Responsive design helpers
   responsiveContainer: {
     paddingHorizontal: Math.min(responsiveWidth(5), 20),
   },
@@ -605,7 +606,7 @@ export const globalStyles = StyleSheet.create({
   },
 });
 
-// UPDATED: Helper functions with better responsive design
+// Helper functions with better responsive design
 export const responsive = {
   width: responsiveWidth,
   height: responsiveHeight,

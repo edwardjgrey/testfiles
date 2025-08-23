@@ -1,4 +1,4 @@
-// Fixed AuthWelcome.js - Remove SafeAreaProvider usage
+// src/components/auth/AuthWelcome.js - FIXED VERSION with proper dark theme
 import React, { useState } from 'react';
 import {
   View,
@@ -11,6 +11,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Linking,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { globalStyles } from '../../styles/globalStyles';
@@ -111,14 +112,10 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f7f8fb' }}>
+      <SafeAreaView style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#05212A" />
         <ActivityIndicator size="large" color="#98DDA6" />
-        <Text style={{
-          marginTop: 16,
-          fontSize: 16,
-          color: '#6b7280',
-          textAlign: 'center'
-        }}>
+        <Text style={styles.loadingText}>
           {language === 'ru' ? 'Аутентификация...' : 
            language === 'ky' ? 'Аутентификация...' : 
            'Authenticating...'}
@@ -128,155 +125,299 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
   }
 
   return (
-    <SafeAreaView style={globalStyles.authContainer}>
-      <StatusBar barStyle="light-content" backgroundColor={globalStyles.authContainer.backgroundColor} />
-      <LanguageSelector language={language} setLanguage={setLanguage} />
-      
-      <ScrollView contentContainerStyle={[
-        globalStyles.scrollContent, 
-        { 
-          paddingHorizontal: width * 0.05,
-          paddingTop: 100
-        }
-      ]}>
-        <View style={[globalStyles.authCard, { maxWidth: width * 0.9, alignSelf: 'center' }]}>
-          <View style={globalStyles.logoWrap}>
-            <AkchabarLogo size="medium" />
-          </View>
-          
-          <Text style={[globalStyles.authTitle, { fontSize: width * 0.065, color: "white" }]}>
-            {t.welcome}
-          </Text>
-          <Text style={[globalStyles.authSubtitle, { 
-            fontSize: width * 0.035,
-            marginBottom: 24,
-            color:"#a8a8a8ff"
-          }]}>
-            {language === 'en' ? 'Your money, your future, your control.' : 
-             language === 'ru' ? 'Ваши деньги, ваше будущее, ваш контроль.' :
-             'Сиздин акчаңыз, келечегиңиз, көзөмөлүңүз.'}
-          </Text>
-
-          {/* Phone Sign-Up Button */}
-          <TouchableOpacity
-            style={[globalStyles.pill, globalStyles.pillPrimary, { marginVertical: 6 }]}
-            onPress={handlePhoneSignUp}
-            disabled={loading}
-          >
-            <Ionicons name="call-outline" size={18} color="black" />
-            <Text style={[globalStyles.pillTextPrimary, { fontSize: width * 0.04, marginLeft: 8 }]}>
-              {t.signUpPhone || 'Sign up with phone number'}
-            </Text>
-          </TouchableOpacity>
-          
-          {/* Email Sign-Up Button */}
-          <TouchableOpacity
-            style={[globalStyles.pill, globalStyles.pillSecondary, { marginVertical: 6 }]}
-            onPress={handleEmailSignUp}
-            disabled={loading}
-          >
-            <Ionicons name="mail-outline" size={18} color={globalStyles.authText} />
-            <Text style={[globalStyles.pillTextSecondary, { fontSize: width * 0.04 }]}>
-              {t.signUpEmail || 'Sign up with email'}
-            </Text>
-          </TouchableOpacity>
-          
-          <View style={[globalStyles.dividerRow, { marginVertical: 8 }]}>
-            <View style={globalStyles.divider} />
-            <Text style={[globalStyles.dividerText, { color: "white"}]}>
-              {t.or || 'or'}
-            </Text>
-            <View style={globalStyles.divider} />
-          </View>
-          
-          {/* Google Sign-Up Button */}
-          <TouchableOpacity
-            style={[globalStyles.pill, globalStyles.pillGoogle, { marginVertical: 6 }]}
-            onPress={handleGoogleAuth}
-            disabled={loading}
-          >
-            <Ionicons name="logo-google" size={18} color="#ffffff" />
-            <Text style={[globalStyles.pillTextGoogle, { 
-              fontSize: width * 0.04, 
-              marginLeft: 12
-            }]}>
-              {t.signUpGoogle || 'Continue with Google'}
-            </Text>
-          </TouchableOpacity>
-          
-          {/* Apple Sign-Up Button */}
-          <TouchableOpacity
-            style={[globalStyles.pill, globalStyles.pillApple, { marginVertical: 6 }]}
-            onPress={handleAppleAuth}
-            disabled={loading}
-          >
-            <Ionicons name="logo-apple" size={18} color="#ffffff" />
-            <Text style={[globalStyles.pillTextApple, { 
-              fontSize: width * 0.04,
-              marginLeft: 12
-            }]}>
-              {t.signUpApple || 'Continue with Apple'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#05212A" />
+      <SafeAreaView style={styles.safeArea}>
         
-        {/* Sign In Link */}
-        <View style={[globalStyles.authCard, globalStyles.signInCard, { marginTop: 12 }]}>
-          <Text style={[globalStyles.alreadyAccountText, { color: "white" }]}>
-            {t.alreadyAccount || 'Already have an account?'}{' '}
-            <Text
-              style={[globalStyles.linkText, { color: globalStyles.primary }]}
-              onPress={handleSignIn}
-            >
-              {t.signIn || 'Sign in'}
-            </Text>
-          </Text>
-        </View>
+        {/* Language Selector */}
+        <LanguageSelector language={language} setLanguage={setLanguage} />
+        
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.contentContainer}>
+            {/* Logo Section */}
+            <View style={styles.logoSection}>
+              <AkchabarLogo size="large" />
+            </View>
+            
+            {/* Title Section */}
+            <View style={styles.titleSection}>
+              <Text style={styles.title}>
+                {t.welcome}
+              </Text>
+              <Text style={styles.subtitle}>
+                {language === 'en' ? 'Your money, your future, your control.' : 
+                 language === 'ru' ? 'Ваши деньги, ваше будущее, ваш контроль.' :
+                 'Сиздин акчаңыз, келечегиңиз, көзөмөлүңүз.'}
+              </Text>
+            </View>
 
-        {/* Terms with Hyperlinks */}
-        <View style={{ 
-          marginTop: 16, 
-          paddingHorizontal: 20,
-          alignItems: 'center'
-        }}>
-          <Text style={[globalStyles.footerText, { 
-            fontSize: width * 0.03,
-            color: "white",
-            textAlign: 'center'
-          }]}>
-            {language === 'en' ? 'By signing up you agree to our ' : 
-             language === 'ru' ? 'Регистрируясь, вы соглашаетесь с нашими ' :
-             'Каттолуп, биздин '}
-            <Text 
-              style={[globalStyles.linkText, { 
-                color: '#98DDA6', 
-                textDecorationLine: 'underline'
-              }]}
-              onPress={openTerms}
-            >
-              {language === 'en' ? 'Terms of Service' : 
-               language === 'ru' ? 'Условиями использования' :
-               'Шарттарыбыз'}
-            </Text>
-            {language === 'en' ? ' and ' : 
-             language === 'ru' ? ' и ' :
-             ' жана '}
-            <Text 
-              style={[globalStyles.linkText, { 
-                color: '#98DDA6', 
-                textDecorationLine: 'underline'
-              }]}
-              onPress={openPrivacy}
-            >
-              {language === 'en' ? 'Privacy Policy' : 
-               language === 'ru' ? 'Политикой конфиденциальности' :
-               'Купуялык саясатыбыз'}
-            </Text>
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            {/* Button Section */}
+            <View style={styles.buttonSection}>
+              {/* Phone Sign-Up Button */}
+              <TouchableOpacity
+                style={[styles.button, styles.primaryButton]}
+                onPress={handlePhoneSignUp}
+                disabled={loading}
+              >
+                <Ionicons name="call-outline" size={18} color="#05212A" />
+                <Text style={styles.primaryButtonText}>
+                  {t.signUpPhone || 'Sign up with phone number'}
+                </Text>
+              </TouchableOpacity>
+              
+              {/* Email Sign-Up Button */}
+              <TouchableOpacity
+                style={[styles.button, styles.secondaryButton]}
+                onPress={handleEmailSignUp}
+                disabled={loading}
+              >
+                <Ionicons name="mail-outline" size={18} color="#ffffff" />
+                <Text style={styles.secondaryButtonText}>
+                  {t.signUpEmail || 'Sign up with email'}
+                </Text>
+              </TouchableOpacity>
+              
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>
+                  {t.or || 'or'}
+                </Text>
+                <View style={styles.dividerLine} />
+              </View>
+              
+              {/* Google Sign-Up Button */}
+              <TouchableOpacity
+                style={[styles.button, styles.googleButton]}
+                onPress={handleGoogleAuth}
+                disabled={loading}
+              >
+                <Ionicons name="logo-google" size={18} color="#ffffff" />
+                <Text style={styles.googleButtonText}>
+                  {t.signUpGoogle || 'Continue with Google'}
+                </Text>
+              </TouchableOpacity>
+              
+              {/* Apple Sign-Up Button */}
+              <TouchableOpacity
+                style={[styles.button, styles.appleButton]}
+                onPress={handleAppleAuth}
+                disabled={loading}
+              >
+                <Ionicons name="logo-apple" size={18} color="#ffffff" />
+                <Text style={styles.appleButtonText}>
+                  {t.signUpApple || 'Continue with Apple'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Sign In Link */}
+            <View style={styles.signInContainer}>
+              <Text style={styles.signInText}>
+                {t.alreadyAccount || 'Already have an account?'}{' '}
+                <Text
+                  style={styles.signInLink}
+                  onPress={handleSignIn}
+                >
+                  {t.signIn || 'Sign in'}
+                </Text>
+              </Text>
+            </View>
+
+            {/* Terms Section */}
+            <View style={styles.termsContainer}>
+              <Text style={styles.termsText}>
+                {language === 'en' ? 'By signing up you agree to our ' : 
+                 language === 'ru' ? 'Регистрируясь, вы соглашаетесь с нашими ' :
+                 'Каттолуп, биздин '}
+                <Text 
+                  style={styles.termsLink}
+                  onPress={openTerms}
+                >
+                  {language === 'en' ? 'Terms of Service' : 
+                   language === 'ru' ? 'Условиями использования' :
+                   'Шарттарыбыз'}
+                </Text>
+                {language === 'en' ? ' and ' : 
+                 language === 'ru' ? ' и ' :
+                 ' жана '}
+                <Text 
+                  style={styles.termsLink}
+                  onPress={openPrivacy}
+                >
+                  {language === 'en' ? 'Privacy Policy' : 
+                   language === 'ru' ? 'Политикой конфиденциальности' :
+                   'Купуялык саясатыбыз'}
+                </Text>
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
+};
+
+const styles = {
+  container: {
+    flex: 1,
+    backgroundColor: '#05212A',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#05212A',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#05212A',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#9ca3af',
+    textAlign: 'center'
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: width * 0.05,
+    paddingVertical: 20,
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: '100%',
+  },
+  logoSection: {
+    marginBottom: 40,
+  },
+  titleSection: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  title: {
+    fontSize: width * 0.08,
+    fontWeight: '800',
+    color: '#ffffff', // FIXED: Changed to white
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: width * 0.1,
+  },
+  subtitle: {
+    fontSize: width * 0.035,
+    color: '#9ca3af', // FIXED: Better contrast for subtitle
+    textAlign: 'center',
+    lineHeight: width * 0.045,
+    paddingHorizontal: 20,
+  },
+  buttonSection: {
+    width: '100%',
+    maxWidth: 350,
+    marginBottom: 30,
+  },
+  button: {
+    height: 54,
+    borderRadius: 27,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 6,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  primaryButton: {
+    backgroundColor: '#98DDA6',
+  },
+  secondaryButton: {
+    backgroundColor: '#374151',
+    borderWidth: 1,
+    borderColor: '#4b5563',
+  },
+  googleButton: {
+    backgroundColor: '#111111',
+  },
+  appleButton: {
+    backgroundColor: '#000000',
+  },
+  primaryButtonText: {
+    color: '#05212A',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  secondaryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  googleButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 12,
+  },
+  appleButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 12,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#374151',
+  },
+  dividerText: {
+    color: '#9ca3af',
+    fontSize: 14,
+    marginHorizontal: 16,
+  },
+  signInContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+    paddingHorizontal: 20,
+  },
+  signInText: {
+    color: '#9ca3af',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  signInLink: {
+    color: '#98DDA6',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  termsContainer: {
+    paddingHorizontal: 30,
+    alignItems: 'center',
+  },
+  termsText: {
+    fontSize: 13,
+    color: '#9ca3af',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: '#98DDA6',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
 };
 
 export default AuthWelcome;

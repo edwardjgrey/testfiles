@@ -1,7 +1,6 @@
-// App.js - CLEANED VERSION with all debug notes removed
+// App.js - FIXED VERSION with proper StatusBar configuration
 import React, { useState, useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { Alert, View, Text, ActivityIndicator } from 'react-native';
+import { StatusBar, Alert, View, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 // Import components
@@ -69,6 +68,13 @@ export default function App() {
     dateOfBirth: '',
     occupation: ''
   });
+
+  // FIXED: Set StatusBar configuration on app load
+  useEffect(() => {
+    // Configure StatusBar for the entire app
+    StatusBar.setBarStyle('light-content', true);
+    StatusBar.setBackgroundColor('#05212A', true);
+  }, []);
 
   // Initialize the app
   useEffect(() => {
@@ -552,10 +558,11 @@ export default function App() {
     handlePhoneSignIn,
   };
 
-  // Loading screen
+  // FIXED: Loading screen with proper StatusBar
   if (isLoading) {
     return (
       <SafeAreaProvider>
+        <StatusBar barStyle="light-content" backgroundColor="#05212A" />
         <SafeAreaView style={{
           flex: 1,
           justifyContent: 'center',
@@ -578,79 +585,93 @@ export default function App() {
 
   // Render screens with security flow
   const renderScreen = () => {
+    // FIXED: Proper StatusBar for all screens
+    const statusBarProps = {
+      barStyle: "light-content",
+      backgroundColor: "#05212A"
+    };
+
     if (!hasSeenOnboarding) {
       return (
-        <OnboardingFlow 
-          language={language} 
-          setLanguage={setLanguage} 
-          onComplete={completeOnboarding}
-        />
+        <>
+          <StatusBar {...statusBarProps} />
+          <OnboardingFlow 
+            language={language} 
+            setLanguage={setLanguage} 
+            onComplete={completeOnboarding}
+          />
+        </>
       );
     }
 
     // If user is authenticated but needs PIN setup (NEW USERS)
     if (isAuthenticated && user && pinSetupRequired && !pinAuthRequired) {
       return (
-        <PinSetup
-          language={language}
-          user={user}
-          onComplete={handlePinSetupComplete}
-        />
+        <>
+          <StatusBar {...statusBarProps} />
+          <PinSetup
+            language={language}
+            user={user}
+            onComplete={handlePinSetupComplete}
+          />
+        </>
       );
     }
 
     // If user is authenticated but needs PIN authentication (EXISTING USERS)
     if (isAuthenticated && user && pinAuthRequired && !pinSetupRequired) {
       return (
-        <PinEntry
-          language={language}
-          user={user}
-          onSuccess={handlePinAuthSuccess}
-          onCancel={signOut}
-        />
+        <>
+          <StatusBar {...statusBarProps} />
+          <PinEntry
+            language={language}
+            user={user}
+            onSuccess={handlePinAuthSuccess}
+            onCancel={signOut}
+          />
+        </>
       );
     }
 
     // If user is fully authenticated and security setup is complete
     if (isAuthenticated && user && securitySetupComplete && !pinSetupRequired && !pinAuthRequired) {
       return (
-        <MainApp 
-          authData={user} 
-          language={language} 
-          onSignOut={signOut}
-        />
+        <>
+          <StatusBar {...statusBarProps} />
+          <MainApp 
+            authData={user} 
+            language={language} 
+            onSignOut={signOut}
+          />
+        </>
       );
     }
 
     // Authentication flow (not authenticated yet)
-    switch (currentAuthView) {
-      case 'welcome':
-        return <AuthWelcome {...authProps} />;
-      case 'signin-form':
-        return <SignInForm {...authProps} />;
-      case 'email':
-        return <EmailRegistration {...authProps} />;
-      case 'phone':
-        return <PhoneEntry {...authProps} />;
-      case 'verify':
-        return <CodeVerification {...authProps} />;
-      case 'profile':
-        return <ProfileSetup {...authProps} />;
-      case 'subscription':
-        return <SubscriptionPlans {...authProps} />;
-      case 'financial':
-        return <FinancialOnboarding {...authProps} />;
-      default:
-        return <AuthWelcome {...authProps} />;
-    }
+    const authScreens = {
+      'welcome': <AuthWelcome {...authProps} />,
+      'signin-form': <SignInForm {...authProps} />,
+      'email': <EmailRegistration {...authProps} />,
+      'phone': <PhoneEntry {...authProps} />,
+      'verify': <CodeVerification {...authProps} />,
+      'profile': <ProfileSetup {...authProps} />,
+      'subscription': <SubscriptionPlans {...authProps} />,
+      'financial': <FinancialOnboarding {...authProps} />
+    };
+
+    return (
+      <>
+        <StatusBar {...statusBarProps} />
+        {authScreens[currentAuthView] || <AuthWelcome {...authProps} />}
+      </>
+    );
   };
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1 }}>
-        <StatusBar style="auto" />
+      <View style={{ flex: 1, backgroundColor: '#05212A' }}>
         {renderScreen()}
-      </SafeAreaView>
+      </View>
     </SafeAreaProvider>
   );
 }
