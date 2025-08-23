@@ -1,6 +1,8 @@
-import { StyleSheet, Dimensions } from 'react-native';
+// src/styles/globalStyles.js - UPDATED with responsive fixes and new auth theme
+import { StyleSheet, Dimensions, StatusBar, Platform } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
+const statusBarHeight = Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 24;
 
 // Responsive helper functions
 const responsiveWidth = (percentage) => (width * percentage) / 100;
@@ -18,25 +20,29 @@ export const colors = {
   text: '#ffffff',
   textDim: '#9ca3af',
   border: '#374151',
-  authBg: '#f7f8fb',
-  authCard: '#ffffff',
-  authText: '#0f172a',
-  authTextDim: '#6b7280',
-  authStroke: '#e5e7eb',
+  
+  // UPDATED: Auth colors to match main app theme
+  authBg: '#05212A', // Changed from '#f7f8fb' to match main app
+  authCard: '#1f2937', // Changed from '#ffffff' to match main app cards
+  authText: '#ffffff', // Changed from '#0f172a' to white
+  authTextDim: '#9ca3af', // Slightly updated for better contrast
+  authStroke: '#374151', // Changed from '#e5e7eb' to match main app borders
+  
   success: '#16a34a',
   danger: '#dc2626',
   warning: '#f59e0b',
   info: '#3b82f6',
   google: '#111111',
   apple: '#000000',
-  secondary: '#e5e7eb',
+  secondary: '#374151', // Updated to match new theme
 };
 
 export const globalStyles = StyleSheet.create({
-  // Auth Container Styles
+  // FIXED: Auth Container with proper padding and responsive layout
   authContainer: {
     flex: 1,
     backgroundColor: colors.authBg,
+    paddingTop: statusBarHeight, // Proper status bar handling
   },
   
   mainContainer: {
@@ -44,59 +50,68 @@ export const globalStyles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   
+  // FIXED: Responsive scroll content with proper padding
   scrollContent: {
-    padding: responsiveWidth(5),
-    minHeight: height - 100,
-    justifyContent: 'center',
+    flexGrow: 1,
+    paddingHorizontal: responsiveWidth(5),
+    paddingTop: responsiveHeight(2), // Reduced top padding
+    paddingBottom: responsiveHeight(5),
+    minHeight: height - statusBarHeight - 100, // Account for status bar
+    justifyContent: 'flex-start', // Changed from 'center' to prevent pushing content down
   },
   
   mainContent: {
     padding: responsiveWidth(5),
-    paddingTop: responsiveHeight(5),
+    paddingTop: responsiveHeight(3), // Reduced from 5%
   },
   
+  // UPDATED: Auth card with new theme colors
   authCard: {
     backgroundColor: colors.authCard,
     borderRadius: 20,
     padding: responsiveWidth(6),
-    marginVertical: 6,
+    marginVertical: 8, // Increased margin
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.3, // Increased for dark theme
     shadowRadius: 12,
-    elevation: 5,
+    elevation: 8, // Increased for Android
     width: '100%',
     maxWidth: responsiveWidth(90),
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: colors.border, // Added border for dark theme
   },
   
   signInCard: {
     alignItems: 'center',
+    marginTop: 16, // Added top margin
   },
   
-  // Logo Styles
+  // UPDATED: Logo with new theme
   logoWrap: {
     width: responsiveWidth(22),
     height: responsiveWidth(22),
     borderRadius: 16,
-    backgroundColor: '#efeefb',
+    backgroundColor: colors.primary,
     alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    marginBottom: 20, // Increased margin
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   
-  // Typography
+  // UPDATED: Typography with new colors
   authTitle: {
     fontSize: responsiveFontSize(26),
     fontWeight: '800',
     color: colors.authText,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 12, // Increased margin
     lineHeight: responsiveFontSize(32),
   },
   
@@ -104,8 +119,8 @@ export const globalStyles = StyleSheet.create({
     fontSize: responsiveFontSize(26),
     fontWeight: '800',
     color: colors.authText,
-    marginBottom: 8,
-    marginTop: 10,
+    marginBottom: 12, // Increased margin
+    marginTop: 16, // Increased margin
     lineHeight: responsiveFontSize(32),
   },
   
@@ -113,21 +128,21 @@ export const globalStyles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     color: colors.authTextDim,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 20, // Increased margin
     lineHeight: responsiveFontSize(20),
   },
   
   authSubtitleLeft: {
     fontSize: responsiveFontSize(14),
     color: colors.authTextDim,
-    marginBottom: 20,
+    marginBottom: 24, // Increased margin
     lineHeight: responsiveFontSize(20),
   },
   
   footerText: {
     textAlign: 'center',
     color: colors.authTextDim,
-    marginTop: 16,
+    marginTop: 20, // Increased margin
     fontSize: responsiveFontSize(14),
     lineHeight: responsiveFontSize(20),
   },
@@ -138,12 +153,12 @@ export const globalStyles = StyleSheet.create({
   },
   
   linkText: {
-    color: '#6d28d9',
+    color: colors.primary,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
   
-  // Button Styles
+  // UPDATED: Button styles with new theme
   pill: {
     height: responsiveHeight(7),
     borderRadius: responsiveHeight(3.5),
@@ -153,11 +168,11 @@ export const globalStyles = StyleSheet.create({
     marginVertical: 8,
     paddingHorizontal: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-    minHeight: 54, // Ensure minimum height for longer text
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+    minHeight: 54,
   },
   
   pillPrimary: {
@@ -206,27 +221,34 @@ export const globalStyles = StyleSheet.create({
     fontWeight: '700',
   },
   
-  // Back Button
+  // FIXED: Back button alignment
   backButton: {
-    padding: 8,
-    marginBottom: 20,
-    marginTop: 50, // Back to original position since no language selector
+    padding: 12, // Increased padding
+    marginBottom: 16, // Reduced margin
+    marginTop: 8, // Reduced margin
     alignSelf: 'flex-start',
-    borderRadius: 8,
+    borderRadius: 12, // Increased border radius
+    backgroundColor: colors.authCard,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 44, // Minimum touch target
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   
-  // Language Selector
+  // Language Selector (keeping existing position)
   languageContainer: {
     position: 'absolute',
-    top: 30, // Moved up from 50
+    top: statusBarHeight + 10,
     right: 20,
     zIndex: 1000,
   },
   
   languageButton: {
-    backgroundColor: 'white',
+    backgroundColor: colors.authCard,
     borderWidth: 1,
-    borderColor: colors.authStroke,
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 8,
     flexDirection: 'row',
@@ -236,54 +258,58 @@ export const globalStyles = StyleSheet.create({
   
   languageText: {
     fontSize: responsiveFontSize(14),
+    color: colors.authText,
   },
   
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.7)', // Darker overlay
     justifyContent: 'center',
     alignItems: 'center',
   },
   
   languageModal: {
-    backgroundColor: 'white',
-    borderRadius: 8,
+    backgroundColor: colors.authCard,
+    borderRadius: 12, // Increased border radius
     padding: 10,
-    minWidth: 120,
+    minWidth: 140,
     margin: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   
   languageOption: {
-    padding: 10,
-    borderRadius: 6,
+    padding: 12, // Increased padding
+    borderRadius: 8,
   },
   
   selectedLanguage: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.primary + '20', // Semi-transparent primary
   },
   
   languageOptionText: {
     fontSize: responsiveFontSize(14),
+    color: colors.authText,
   },
   
-  // Form Input Styles
+  // UPDATED: Form styles with new theme
   formGroup: {
-    marginBottom: 16,
+    marginBottom: 20, // Increased margin
   },
   
   formLabel: {
     color: colors.authTextDim,
-    marginBottom: 6,
+    marginBottom: 8, // Increased margin
     fontSize: responsiveFontSize(14),
     fontWeight: '500',
   },
   
   formInput: {
     borderWidth: 1,
-    borderColor: colors.authStroke,
+    borderColor: colors.border,
     borderRadius: 12,
-    padding: 14,
-    backgroundColor: '#fff',
+    padding: 16, // Increased padding
+    backgroundColor: colors.background,
     fontSize: responsiveFontSize(16),
     color: colors.authText,
     minHeight: responsiveHeight(6.5),
@@ -291,21 +317,22 @@ export const globalStyles = StyleSheet.create({
   
   formInputFocused: {
     borderColor: colors.primary,
+    backgroundColor: colors.cardBackground,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   
-  // Phone Input Styles
+  // UPDATED: Phone input with new theme
   phoneInputContainer: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: colors.authStroke,
+    borderColor: colors.border,
     borderRadius: 14,
-    backgroundColor: '#fff',
-    marginBottom: 16,
+    backgroundColor: colors.background,
+    marginBottom: 20,
     alignItems: 'center',
     minHeight: responsiveHeight(7),
   },
@@ -316,7 +343,7 @@ export const globalStyles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 16,
     borderRightWidth: 1,
-    borderRightColor: colors.authStroke,
+    borderRightColor: colors.border,
     gap: 8,
   },
   
@@ -338,23 +365,23 @@ export const globalStyles = StyleSheet.create({
     paddingVertical: 16,
   },
   
-  // Verification Input
+  // UPDATED: Verification input with new theme
   verificationInput: {
     height: responsiveHeight(7),
     borderWidth: 1,
-    borderColor: colors.authStroke,
+    borderColor: colors.border,
     borderRadius: 14,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     textAlign: 'center',
     fontSize: responsiveFontSize(24),
     letterSpacing: 8,
-    marginBottom: 16,
+    marginBottom: 20,
     color: colors.authText,
   },
   
   resendSection: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   
   resendText: {
@@ -368,13 +395,15 @@ export const globalStyles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
   },
   
-  // Country Modal
+  // UPDATED: Country modal with new theme
   countryModal: {
-    backgroundColor: 'white',
-    borderRadius: 8,
+    backgroundColor: colors.authCard,
+    borderRadius: 12,
     margin: 20,
     maxHeight: height * 0.6,
     width: width * 0.9,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   
   modalTitle: {
@@ -382,23 +411,25 @@ export const globalStyles = StyleSheet.create({
     fontWeight: 'bold',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: colors.authStroke,
+    borderBottomColor: colors.border,
+    color: colors.authText,
   },
   
   countryOption: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: colors.border,
   },
   
   countryOptionText: {
     fontSize: responsiveFontSize(14),
+    color: colors.authText,
   },
   
-  // Profile Picture
+  // UPDATED: Profile picture with new theme
   profilePicSection: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 28, // Increased margin
   },
   
   profilePicContainer: {
@@ -417,11 +448,11 @@ export const globalStyles = StyleSheet.create({
     width: responsiveWidth(20),
     height: responsiveWidth(20),
     borderRadius: responsiveWidth(10),
-    backgroundColor: colors.authStroke,
+    backgroundColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: colors.authStroke,
+    borderColor: colors.primary,
   },
   
   profilePicUpload: {
@@ -435,44 +466,44 @@ export const globalStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: colors.background,
   },
   
-  // Plans
+  // UPDATED: Plan styles with new theme and better spacing
   plansContainer: {
-    marginBottom: 30, // Increased from 20
-    gap: 20, // Added gap between plan cards
+    marginBottom: 30,
+    gap: 16, // Reduced gap for better fit
   },
   
   planCard: {
     borderWidth: 2,
-    borderColor: colors.authStroke,
-    borderRadius: 20, // Increased from 16 for softer look
-    padding: responsiveWidth(6), // Increased from 5
-    marginBottom: 20, // Increased from 12
+    borderColor: colors.border,
+    borderRadius: 20,
+    padding: responsiveWidth(5), // Reduced padding slightly
+    marginBottom: 16,
     position: 'relative',
-    backgroundColor: 'white',
-    marginHorizontal: responsiveWidth(2), // Added horizontal margin
+    backgroundColor: colors.authCard,
+    marginHorizontal: 0, // Removed horizontal margin
   },
   
   planCardSelected: {
     borderColor: colors.primary,
-    backgroundColor: '#f0fdf4',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 }, // Increased shadow
-    shadowOpacity: 0.15,
-    shadowRadius: 16, // Increased shadow radius
-    elevation: 8, // Increased elevation
+    backgroundColor: colors.cardBackground,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   
   popularBadge: {
     position: 'absolute',
-    top: -12, // Moved up slightly
+    top: -12,
     alignSelf: 'center',
     backgroundColor: '#7c3aed',
-    paddingHorizontal: 20, // Increased from 16
-    paddingVertical: 6, // Increased from 4
-    borderRadius: 15, // Increased from 12
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    borderRadius: 15,
     shadowColor: '#7c3aed',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -483,56 +514,56 @@ export const globalStyles = StyleSheet.create({
   popularBadgeText: {
     color: 'white',
     fontSize: responsiveFontSize(12),
-    fontWeight: '700', // Increased from 600
+    fontWeight: '700',
   },
   
   planHeader: {
-    marginBottom: 20, // Increased from 16
-    marginTop: 8, // Added top margin for popular badge spacing
+    marginBottom: 16, // Reduced margin
+    marginTop: 8,
   },
   
   planName: {
-    fontSize: responsiveFontSize(22), // Increased from 20
-    fontWeight: '800', // Increased from 700
+    fontSize: responsiveFontSize(20), // Reduced from 22
+    fontWeight: '800',
     color: colors.authText,
-    marginBottom: 12, // Increased from 8
+    marginBottom: 10, // Reduced margin
   },
   
   planPrice: {
-    fontSize: responsiveFontSize(28), // Increased from 24
-    fontWeight: '900', // Increased from 800
+    fontSize: responsiveFontSize(24), // Reduced from 28
+    fontWeight: '900',
     color: colors.authText,
-    lineHeight: responsiveFontSize(32),
+    lineHeight: responsiveFontSize(28),
   },
   
   planPeriod: {
-    fontSize: responsiveFontSize(15), // Increased from 14
+    fontSize: responsiveFontSize(14),
     color: colors.authTextDim,
-    fontWeight: '500', // Increased from 400
+    fontWeight: '500',
   },
   
   planFeatures: {
-    marginBottom: 20, // Increased from 16
-    gap: 12, // Added gap between features
+    marginBottom: 16, // Reduced margin
+    gap: 8, // Reduced gap
   },
   
   planFeature: {
     flexDirection: 'row',
-    alignItems: 'flex-start', // Changed from center for better text alignment
-    gap: 12, // Increased from 8
-    marginBottom: 12, // Increased from 8
-    paddingVertical: 2, // Added vertical padding
+    alignItems: 'flex-start',
+    gap: 10, // Reduced gap
+    marginBottom: 8, // Reduced margin
+    paddingVertical: 2,
   },
   
   planFeatureText: {
-    fontSize: responsiveFontSize(15), // Increased from 14
+    fontSize: responsiveFontSize(14),
     color: colors.authText,
     flex: 1,
-    lineHeight: responsiveFontSize(20), // Added line height
-    marginTop: -2, // Slight adjustment for icon alignment
+    lineHeight: responsiveFontSize(18), // Reduced line height
+    marginTop: -2,
   },
   
-  // Divider
+  // Divider styles remain the same but updated colors
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -543,7 +574,7 @@ export const globalStyles = StyleSheet.create({
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.authStroke,
+    backgroundColor: colors.border,
   },
   
   dividerText: {
@@ -551,125 +582,30 @@ export const globalStyles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
   },
   
-  // Main App Styles
-  userGreeting: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 24,
+  // Add responsive design helpers at the end
+  responsiveContainer: {
+    paddingHorizontal: Math.min(responsiveWidth(5), 20),
   },
   
-  userAvatar: {
-    width: responsiveWidth(12),
-    height: responsiveWidth(12),
-    borderRadius: responsiveWidth(6),
-  },
-  
-  avatarImage: {
-    width: responsiveWidth(12),
-    height: responsiveWidth(12),
-    borderRadius: responsiveWidth(6),
-  },
-  
-  avatarPlaceholder: {
-    width: responsiveWidth(12),
-    height: responsiveWidth(12),
-    borderRadius: responsiveWidth(6),
-    backgroundColor: colors.primary,
+  centeredContent: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   
-  avatarText: {
-    fontSize: responsiveFontSize(20),
-    fontWeight: 'bold',
-    color: colors.background,
+  spacingSmall: {
+    marginVertical: responsiveHeight(1),
   },
   
-  greeting: {
-    fontSize: responsiveFontSize(24),
-    fontWeight: 'bold',
-    color: colors.text,
+  spacingMedium: {
+    marginVertical: responsiveHeight(2),
   },
   
-  subGreeting: {
-    fontSize: responsiveFontSize(16),
-    color: colors.textDim,
-    marginTop: 4,
-  },
-  
-  balanceCard: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: responsiveWidth(5),
-    marginBottom: 16,
-  },
-  
-  balanceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  
-  balanceLabel: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: responsiveFontSize(14),
-  },
-  
-  balanceAmount: {
-    color: 'white',
-    fontSize: responsiveFontSize(28),
-    fontWeight: 'bold',
-  },
-  
-  quickStats: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 24,
-  },
-  
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.cardBackground,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    padding: responsiveWidth(4),
-  },
-  
-  statLabel: {
-    fontSize: responsiveFontSize(14),
-    color: colors.textDim,
-    marginBottom: 8,
-  },
-  
-  statValue: {
-    fontSize: responsiveFontSize(16),
-    fontWeight: '600',
-    color: colors.text,
-  },
-  
-  successCard: {
-    marginTop: 24,
-  },
-  
-  successTitle: {
-    fontSize: responsiveFontSize(18),
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: 16,
-  },
-  
-  successText: {
-    color: colors.authTextDim,
-    marginBottom: 16,
-    lineHeight: responsiveFontSize(20),
-    fontSize: responsiveFontSize(14),
+  spacingLarge: {
+    marginVertical: responsiveHeight(3),
   },
 });
 
-// Helper functions for responsive design
+// UPDATED: Helper functions with better responsive design
 export const responsive = {
   width: responsiveWidth,
   height: responsiveHeight,
@@ -680,19 +616,24 @@ export const responsive = {
   isMediumDevice: width >= 375 && width < 414,
   isLargeDevice: width >= 414,
   
-  // Spacing helpers
-  spacing: {
-    xs: responsiveWidth(1),
-    sm: responsiveWidth(2),
-    md: responsiveWidth(4),
-    lg: responsiveWidth(6),
-    xl: responsiveWidth(8),
+  // Screen dimensions
+  screenWidth: width,
+  screenHeight: height,
+  statusBarHeight,
+  
+  // Safe spacing
+  safeSpacing: {
+    xs: Math.max(responsiveWidth(1), 4),
+    sm: Math.max(responsiveWidth(2), 8),
+    md: Math.max(responsiveWidth(4), 16),
+    lg: Math.max(responsiveWidth(6), 24),
+    xl: Math.max(responsiveWidth(8), 32),
   },
   
   // Common responsive values
-  buttonHeight: responsiveHeight(7),
-  inputHeight: responsiveHeight(6.5),
-  headerFontSize: responsiveFontSize(26),
-  bodyFontSize: responsiveFontSize(16),
-  smallFontSize: responsiveFontSize(14),
+  buttonHeight: Math.max(responsiveHeight(7), 48),
+  inputHeight: Math.max(responsiveHeight(6.5), 44),
+  headerFontSize: Math.max(responsiveFontSize(26), 22),
+  bodyFontSize: Math.max(responsiveFontSize(16), 14),
+  smallFontSize: Math.max(responsiveFontSize(14), 12),
 };

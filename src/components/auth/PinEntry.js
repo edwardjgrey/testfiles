@@ -1,4 +1,4 @@
-// src/components/auth/PinEntry.js - FIXED VERSION with proper export
+// src/components/auth/PinEntry.js - FIXED responsive layout and formatting
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,10 +11,13 @@ import {
   Vibration,
   Animated,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SecurityService from '../../services/securityService';
 import BiometricService from '../../services/biometricService';
+
+const { width, height } = Dimensions.get('window');
 
 const PinEntry = ({ language, onSuccess, onCancel, user }) => {
   const [pin, setPin] = useState('');
@@ -32,7 +35,6 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
   useEffect(() => {
     if (user?.id) {
       console.log('🔐 PinEntry initialized for user:', user.id);
-      // Set the current user in SecurityService
       SecurityService.setCurrentUser(user.id);
       checkSecurityStatus();
       checkBiometricAvailability();
@@ -181,10 +183,8 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
       
       console.log('🔍 Verifying PIN for user:', user.id);
       
-      // Ensure SecurityService has the correct user ID
       SecurityService.setCurrentUser(user.id);
       
-      // Verify PIN with explicit user ID
       const result = await SecurityService.verifyPin(enteredPin, user.id);
       console.log('🔍 PIN verification result:', result);
       
@@ -286,6 +286,7 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
                   }
                 }}
                 disabled={item === '' || loading || isLockedOut}
+                activeOpacity={0.7}
               >
                 {item === 'delete' ? (
                   <Ionicons 
@@ -411,15 +412,15 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingTop: 20, // Reduced top padding
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
+    marginBottom: 30, // Reduced margin
   },
   userInfo: {
     flexDirection: 'row',
@@ -453,7 +454,7 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     alignItems: 'center',
-    marginVertical: 40,
+    marginBottom: 30, // Reduced margin
   },
   title: {
     fontSize: 28,
@@ -478,7 +479,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 30,
+    marginBottom: 40, // Increased margin for better spacing
   },
   pinDot: {
     width: 20,
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(152, 221, 166, 0.1)',
     borderRadius: 12,
     paddingVertical: 16,
-    marginVertical: 20,
+    marginBottom: 30, // Added margin
     borderWidth: 1,
     borderColor: 'rgba(152, 221, 166, 0.3)',
   },
@@ -513,36 +514,49 @@ const styles = StyleSheet.create({
     color: '#98DDA6',
     marginLeft: 8,
   },
+  // FIXED: Responsive number pad layout
   numberPad: {
     flex: 1,
     justifyContent: 'center',
-    maxHeight: 400,
+    alignItems: 'center',
+    maxHeight: Math.min(height * 0.45, 400), // Responsive max height
+    paddingVertical: 20,
   },
   numberRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginVertical: 8,
+    width: '100%',
+    maxWidth: Math.min(width - 40, 300), // Responsive max width
   },
   numberButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: Math.min((width - 80) / 3.5, 80), // Responsive button size
+    height: Math.min((width - 80) / 3.5, 80),
+    borderRadius: Math.min((width - 80) / 7, 40),
     backgroundColor: '#1f2937',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#374151',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
   numberButtonEmpty: {
     backgroundColor: 'transparent',
     borderColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   numberButtonDisabled: {
     backgroundColor: '#374151',
     opacity: 0.5,
   },
   numberButtonText: {
-    fontSize: 24,
+    fontSize: Math.min(width / 15, 24), // Responsive font size
     fontWeight: '600',
     color: '#ffffff',
   },
@@ -550,21 +564,25 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   loadingContainer: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
     alignItems: 'center',
-    marginTop: 20,
   },
   debugContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     padding: 10,
     borderRadius: 8,
-    marginTop: 20,
+    position: 'absolute',
+    bottom: 10,
+    left: 20,
+    right: 20,
   },
   debugText: {
     color: '#9ca3af',
-    fontSize: 12,
+    fontSize: 10,
     marginBottom: 2,
   },
 });
 
-// IMPORTANT: Use export default
 export default PinEntry;
