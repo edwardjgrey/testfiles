@@ -136,7 +136,7 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
         globalStyles.scrollContent, 
         { 
           paddingHorizontal: width * 0.05,
-          paddingTop: 80
+          paddingTop: 100
         }
       ]}>
         <View style={[globalStyles.authCard, { maxWidth: width * 0.9, alignSelf: 'center' }]}>
@@ -163,7 +163,7 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
             onPress={handlePhoneSignUp}
             disabled={loading}
           >
-            <Ionicons name="call-outline" size={18} color="#ffffff" />
+            <Ionicons name="call-outline" size={18} color="black" />
             <Text style={[globalStyles.pillTextPrimary, { fontSize: width * 0.04, marginLeft: 8 }]}>
               {t.signUpPhone || 'Sign up with phone number'}
             </Text>

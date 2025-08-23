@@ -1,4 +1,3 @@
-// src/styles/globalStyles.js - FIXED FORMAT ISSUES
 import { StyleSheet, Dimensions } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -45,17 +44,15 @@ export const globalStyles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   
-  // FIXED: Better scroll content handling to prevent pushing down
   scrollContent: {
     padding: responsiveWidth(5),
-    paddingTop: responsiveHeight(2), // Reduced from 5 to 2
     minHeight: height - 100,
-    justifyContent: 'flex-start', // Changed from center to flex-start
+    justifyContent: 'center',
   },
   
   mainContent: {
     padding: responsiveWidth(5),
-    paddingTop: responsiveHeight(3), // Reduced from 5 to 3
+    paddingTop: responsiveHeight(5),
   },
   
   authCard: {
@@ -209,29 +206,19 @@ export const globalStyles = StyleSheet.create({
     fontWeight: '700',
   },
   
-  // FIXED: Back Button - consistent across all screens
+  // Back Button
   backButton: {
     padding: 8,
     marginBottom: 20,
-    marginTop: 50, // Consistent positioning
+    marginTop: 50, // Back to original position since no language selector
     alignSelf: 'flex-start',
     borderRadius: 8,
   },
   
-  // Back Button for dark backgrounds
-  backButtonDark: {
-    padding: 8,
-    marginBottom: 20,
-    marginTop: 50,
-    alignSelf: 'flex-start',
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  
-  // FIXED: Language Selector positioning
+  // Language Selector
   languageContainer: {
     position: 'absolute',
-    top: 50, // Moved down from 30 to avoid overlap
+    top: 30, // Moved up from 50
     right: 20,
     zIndex: 1000,
   },
@@ -453,39 +440,39 @@ export const globalStyles = StyleSheet.create({
   
   // Plans
   plansContainer: {
-    marginBottom: 30,
-    gap: 20,
+    marginBottom: 30, // Increased from 20
+    gap: 20, // Added gap between plan cards
   },
   
   planCard: {
     borderWidth: 2,
     borderColor: colors.authStroke,
-    borderRadius: 20,
-    padding: responsiveWidth(6),
-    marginBottom: 20,
+    borderRadius: 20, // Increased from 16 for softer look
+    padding: responsiveWidth(6), // Increased from 5
+    marginBottom: 20, // Increased from 12
     position: 'relative',
     backgroundColor: 'white',
-    marginHorizontal: responsiveWidth(2),
+    marginHorizontal: responsiveWidth(2), // Added horizontal margin
   },
   
   planCardSelected: {
     borderColor: colors.primary,
     backgroundColor: '#f0fdf4',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 6 }, // Increased shadow
     shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowRadius: 16, // Increased shadow radius
+    elevation: 8, // Increased elevation
   },
   
   popularBadge: {
     position: 'absolute',
-    top: -12,
+    top: -12, // Moved up slightly
     alignSelf: 'center',
     backgroundColor: '#7c3aed',
-    paddingHorizontal: 20,
-    paddingVertical: 6,
-    borderRadius: 15,
+    paddingHorizontal: 20, // Increased from 16
+    paddingVertical: 6, // Increased from 4
+    borderRadius: 15, // Increased from 12
     shadowColor: '#7c3aed',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -496,53 +483,53 @@ export const globalStyles = StyleSheet.create({
   popularBadgeText: {
     color: 'white',
     fontSize: responsiveFontSize(12),
-    fontWeight: '700',
+    fontWeight: '700', // Increased from 600
   },
   
   planHeader: {
-    marginBottom: 20,
-    marginTop: 8,
+    marginBottom: 20, // Increased from 16
+    marginTop: 8, // Added top margin for popular badge spacing
   },
   
   planName: {
-    fontSize: responsiveFontSize(22),
-    fontWeight: '800',
+    fontSize: responsiveFontSize(22), // Increased from 20
+    fontWeight: '800', // Increased from 700
     color: colors.authText,
-    marginBottom: 12,
+    marginBottom: 12, // Increased from 8
   },
   
   planPrice: {
-    fontSize: responsiveFontSize(28),
-    fontWeight: '900',
+    fontSize: responsiveFontSize(28), // Increased from 24
+    fontWeight: '900', // Increased from 800
     color: colors.authText,
     lineHeight: responsiveFontSize(32),
   },
   
   planPeriod: {
-    fontSize: responsiveFontSize(15),
+    fontSize: responsiveFontSize(15), // Increased from 14
     color: colors.authTextDim,
-    fontWeight: '500',
+    fontWeight: '500', // Increased from 400
   },
   
   planFeatures: {
-    marginBottom: 20,
-    gap: 12,
+    marginBottom: 20, // Increased from 16
+    gap: 12, // Added gap between features
   },
   
   planFeature: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 12,
-    paddingVertical: 2,
+    alignItems: 'flex-start', // Changed from center for better text alignment
+    gap: 12, // Increased from 8
+    marginBottom: 12, // Increased from 8
+    paddingVertical: 2, // Added vertical padding
   },
   
   planFeatureText: {
-    fontSize: responsiveFontSize(15),
+    fontSize: responsiveFontSize(15), // Increased from 14
     color: colors.authText,
     flex: 1,
-    lineHeight: responsiveFontSize(20),
-    marginTop: -2,
+    lineHeight: responsiveFontSize(20), // Added line height
+    marginTop: -2, // Slight adjustment for icon alignment
   },
   
   // Divider
