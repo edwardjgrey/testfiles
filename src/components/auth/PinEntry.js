@@ -1,4 +1,4 @@
-// src/components/auth/PinEntry.js - FIXED responsive layout and formatting
+// src/components/auth/PinEntry.js - AVATAR REMOVED
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,13 +11,10 @@ import {
   Vibration,
   Animated,
   ActivityIndicator,
-  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SecurityService from '../../services/securityService';
 import BiometricService from '../../services/biometricService';
-
-const { width, height } = Dimensions.get('window');
 
 const PinEntry = ({ language, onSuccess, onCancel, user }) => {
   const [pin, setPin] = useState('');
@@ -27,7 +24,7 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
   const [lockoutTime, setLockoutTime] = useState(0);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState('');
-  
+
   // Animations
   const shakeAnimation = new Animated.Value(0);
   const fadeAnimation = new Animated.Value(1);
@@ -70,7 +67,7 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
       console.log('🔍 Checking security status for user:', user.id);
       const status = await SecurityService.getSecurityStatus(user.id);
       console.log('📊 Security status:', status);
-      
+
       setAttempts(status.failedAttempts);
       setIsLockedOut(status.isLockedOut);
       if (status.isLockedOut) {
@@ -94,7 +91,7 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
   const getText = (key) => {
     const texts = {
       en: {
-        enterPin: 'Enter your PIN',
+        enterPin: 'Enter Your PIN',
         enterPinSubtitle: 'Enter your 6-digit PIN to continue',
         incorrectPin: 'Incorrect PIN',
         attemptsRemaining: 'attempts remaining',
@@ -106,8 +103,6 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
         delete: 'Delete',
         biometricPrompt: `Use ${biometricType} to unlock Akchabar`,
         biometricFailed: 'Biometric authentication failed',
-        pinRequired: 'PIN Required',
-        pinRequiredMessage: 'Please set up a PIN to secure your account'
       },
       ru: {
         enterPin: 'Введите PIN-код',
@@ -122,8 +117,6 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
         delete: 'Удалить',
         biometricPrompt: `Используйте ${biometricType} для разблокировки Akchabar`,
         biometricFailed: 'Биометрическая аутентификация не удалась',
-        pinRequired: 'Требуется PIN-код',
-        pinRequiredMessage: 'Пожалуйста, установите PIN-код для защиты аккаунта'
       },
       ky: {
         enterPin: 'PIN кодун киргизиңиз',
@@ -138,8 +131,6 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
         delete: 'Өчүрүү',
         biometricPrompt: `Akchabar блогун ачуу үчүн ${biometricType} колдонуңуз`,
         biometricFailed: 'Биометрикалык аутентификация ийгиликсиз',
-        pinRequired: 'PIN код талап кылынат',
-        pinRequiredMessage: 'Аккаунтуңузду коргоо үчүн PIN код коюңуз'
       }
     };
     return texts[language]?.[key] || texts.en[key] || key;
@@ -160,7 +151,6 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
       const newPin = pin + number;
       setPin(newPin);
 
-      // Auto-verify when PIN is complete
       if (newPin.length === 6) {
         setTimeout(() => verifyPin(newPin), 200);
       }
@@ -180,14 +170,14 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
       }
 
       setLoading(true);
-      
+
       console.log('🔍 Verifying PIN for user:', user.id);
-      
+
       SecurityService.setCurrentUser(user.id);
-      
+
       const result = await SecurityService.verifyPin(enteredPin, user.id);
       console.log('🔍 PIN verification result:', result);
-      
+
       if (result.success) {
         console.log('✅ PIN verification successful for user:', user.id);
         onSuccess();
@@ -195,7 +185,7 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
         console.log('❌ PIN verification failed for user:', user.id, 'Error:', result.error);
         shakeError();
         setPin('');
-        
+
         if (result.lockedOut) {
           setIsLockedOut(true);
           if (result.remainingTime) {
@@ -220,9 +210,9 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
   const handleBiometricAuth = async () => {
     try {
       setLoading(true);
-      
+
       const result = await BiometricService.authenticateWithBiometric();
-      
+
       if (result.success) {
         console.log('✅ Biometric authentication successful for user:', user?.id);
         onSuccess();
@@ -286,13 +276,12 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
                   }
                 }}
                 disabled={item === '' || loading || isLockedOut}
-                activeOpacity={0.7}
               >
                 {item === 'delete' ? (
-                  <Ionicons 
-                    name="backspace-outline" 
-                    size={24} 
-                    color={isLockedOut ? "#6b7280" : "#ffffff"} 
+                  <Ionicons
+                    name="backspace-outline"
+                    size={24}
+                    color={isLockedOut ? "#6b7280" : "#ffffff"}
                   />
                 ) : (
                   <Text style={[
@@ -313,67 +302,74 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#05212a" />
-      
-      <Animated.View 
-        style={[
-          styles.content,
-          { 
-            opacity: fadeAnimation,
-            transform: [{ translateX: shakeAnimation }]
-          }
-        ]}
-      >
+
+      <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user?.firstName?.[0]?.toUpperCase() || 'U'}
-              </Text>
-            </View>
             <Text style={styles.welcomeText}>
-              Welcome back, {user?.firstName || 'User'}
+              Welcome back, {user?.firstName || user?.name || 'User'}!
             </Text>
           </View>
-          
+
           {onCancel && (
             <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-              <Text style={styles.cancelButtonText}>{getText('cancel')}</Text>
+              <Text style={styles.cancelText}>{getText('cancel')}</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Title */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>{getText('enterPin')}</Text>
-          <Text style={styles.subtitle}>
-            {isLockedOut 
-              ? `${getText('tryAgainIn')} ${formatLockoutTime()}`
-              : getText('enterPinSubtitle')
+        <Animated.View
+          style={[
+            styles.mainContent,
+            {
+              opacity: fadeAnimation,
+              transform: [{ translateX: shakeAnimation }]
             }
-          </Text>
-          
-          {attempts > 0 && !isLockedOut && (
-            <Text style={styles.attemptsText}>
-              {attempts}/5 {getText('attemptsRemaining')}
+          ]}
+        >
+          {/* Title */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>{getText('enterPin')}</Text>
+            <Text style={styles.subtitle}>
+              {isLockedOut
+                ? `${getText('tryAgainIn')} ${formatLockoutTime()}`
+                : getText('enterPinSubtitle')
+              }
             </Text>
+
+            {attempts > 0 && !isLockedOut && (
+              <Text style={styles.attemptsText}>
+                {attempts}/5 {getText('attemptsRemaining')}
+              </Text>
+            )}
+          </View>
+
+          {/* PIN Dots */}
+          {renderPinDots()}
+
+          {/* Number Pad */}
+          {renderNumberPad()}
+
+          {/* Loading Indicator */}
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#98DDA6" />
+            </View>
           )}
-        </View>
+        </Animated.View>
 
-        {/* PIN Dots */}
-        {renderPinDots()}
-
-        {/* Biometric Option */}
+        {/* Biometric Login Button */}
         {biometricAvailable && !isLockedOut && (
           <TouchableOpacity
             style={styles.biometricButton}
             onPress={handleBiometricAuth}
             disabled={loading}
           >
-            <Ionicons 
-              name={biometricType === 'Face ID' ? 'scan' : 'finger-print'} 
-              size={24} 
-              color="#98DDA6" 
+            <Ionicons
+              name={biometricType === 'Face ID' ? 'scan' : 'finger-print'}
+              size={24}
+              color="#98DDA6"
             />
             <Text style={styles.biometricButtonText}>
               {getText('useBiometric')}
@@ -381,26 +377,24 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
           </TouchableOpacity>
         )}
 
-        {/* Number Pad */}
-        {renderNumberPad()}
-
-        {/* Loading Indicator */}
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#98DDA6" />
-          </View>
+        {/* Fallback Biometric Button for Testing */}
+        {!biometricAvailable && !isLockedOut && (
+          <TouchableOpacity
+            style={styles.biometricButton}
+            onPress={handleBiometricAuth}
+            disabled={loading}
+          >
+            <Ionicons
+              name="finger-print"
+              size={24}
+              color="#98DDA6"
+            />
+            <Text style={styles.biometricButtonText}>
+              Use Biometric
+            </Text>
+          </TouchableOpacity>
         )}
-
-        {/* Debug Info */}
-        {__DEV__ && (
-          <View style={styles.debugContainer}>
-            <Text style={styles.debugText}>Debug: User ID: {user?.id || 'MISSING'}</Text>
-            <Text style={styles.debugText}>PIN Length: {pin.length}</Text>
-            <Text style={styles.debugText}>Attempts: {attempts}</Text>
-            <Text style={styles.debugText}>Locked: {isLockedOut ? 'Yes' : 'No'}</Text>
-          </View>
-        )}
-      </Animated.View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -413,32 +407,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 20, // Reduced top padding
+    paddingTop: 20,
     paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 30, // Reduced margin
+    marginBottom: 20,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#98DDA6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#05212a',
   },
   welcomeText: {
     fontSize: 18,
@@ -448,16 +428,20 @@ const styles = StyleSheet.create({
   cancelButton: {
     padding: 8,
   },
-  cancelButtonText: {
+  cancelText: {
     fontSize: 16,
     color: '#9ca3af',
   },
+  mainContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
   titleContainer: {
     alignItems: 'center',
-    marginBottom: 30, // Reduced margin
+    marginBottom: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
@@ -479,7 +463,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 40, // Increased margin for better spacing
+    marginBottom: 20,
   },
   pinDot: {
     width: 20,
@@ -487,7 +471,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: '#374151',
-    marginHorizontal: 12,
+    marginHorizontal: 15,
   },
   pinDotFilled: {
     backgroundColor: '#98DDA6',
@@ -497,66 +481,35 @@ const styles = StyleSheet.create({
     borderColor: '#6b7280',
     backgroundColor: 'transparent',
   },
-  biometricButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(152, 221, 166, 0.1)',
-    borderRadius: 12,
-    paddingVertical: 16,
-    marginBottom: 30, // Added margin
-    borderWidth: 1,
-    borderColor: 'rgba(152, 221, 166, 0.3)',
-  },
-  biometricButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#98DDA6',
-    marginLeft: 8,
-  },
-  // FIXED: Responsive number pad layout
   numberPad: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    maxHeight: Math.min(height * 0.45, 400), // Responsive max height
-    paddingVertical: 20,
+    alignSelf: 'center',
+    width: 300,
   },
   numberRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 8,
-    width: '100%',
-    maxWidth: Math.min(width - 40, 300), // Responsive max width
+    marginBottom: 20,
   },
   numberButton: {
-    width: Math.min((width - 80) / 3.5, 80), // Responsive button size
-    height: Math.min((width - 80) / 3.5, 80),
-    borderRadius: Math.min((width - 80) / 7, 40),
-    backgroundColor: '#1f2937',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#374151',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#374151',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
+    borderColor: '#4b5563',
   },
   numberButtonEmpty: {
     backgroundColor: 'transparent',
     borderColor: 'transparent',
-    shadowOpacity: 0,
-    elevation: 0,
   },
   numberButtonDisabled: {
     backgroundColor: '#374151',
     opacity: 0.5,
   },
   numberButtonText: {
-    fontSize: Math.min(width / 15, 24), // Responsive font size
+    fontSize: 24,
     fontWeight: '600',
     color: '#ffffff',
   },
@@ -564,24 +517,29 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   loadingContainer: {
-    position: 'absolute',
-    bottom: 40,
-    alignSelf: 'center',
     alignItems: 'center',
+    marginBottom: 20,
   },
-  debugContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 10,
-    borderRadius: 8,
-    position: 'absolute',
-    bottom: 10,
-    left: 20,
-    right: 20,
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(152, 221, 166, 0.1)',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    marginTop: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(152, 221, 166, 0.3)',
+    alignSelf: 'stretch',
+    marginHorizontal: 20,
   },
-  debugText: {
-    color: '#9ca3af',
-    fontSize: 10,
-    marginBottom: 2,
+  biometricButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#98DDA6',
+    marginLeft: 8,
   },
 });
 

@@ -168,14 +168,16 @@ export const translations = {
 };
 
 // UPDATED: Country codes with Uzbekistan and SMS login support
+// src/utils/translations.js - Lines 85-95 (countryCodes section)
+
 export const countryCodes = [
-  { code: '+996', flag: '🇰🇬', country: 'Kyrgyzstan', smsSupported: true },
-  { code: '+998', flag: '🇺🇿', country: 'Uzbekistan', smsSupported: true }, // ADDED
-  { code: '+7', flag: '🇰🇿', country: 'Kazakhstan', smsSupported: true },
-  { code: '+7', flag: '🇷🇺', country: 'Russia', smsSupported: true },
-  { code: '+992', flag: '🇹🇯', country: 'Tajikistan', smsSupported: false },
-  { code: '+1', flag: '🇺🇸', country: 'USA', smsSupported: true },
-  { code: '+44', flag: '🇬🇧', country: 'UK', smsSupported: true },
+  { code: '+996', flag: '🇰🇬', country: 'Kyrgyzstan' },
+  { code: '+998', flag: '🇺🇿', country: 'Uzbekistan' }, // Added Uzbekistan
+  { code: '+1', flag: '🇺🇸', country: 'USA' },
+  { code: '+44', flag: '🇬🇧', country: 'UK' },
+  { code: '+7', flag: '🇷🇺', country: 'Russia' },
+  { code: '+7', flag: '🇰🇿', country: 'Kazakhstan' },
+  { code: '+992', flag: '🇹🇯', country: 'Tajikistan' }
 ];
 
 // UPDATED: Plan information with more details and GBP pricing

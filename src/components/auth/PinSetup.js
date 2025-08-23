@@ -1,4 +1,4 @@
-// src/components/auth/PinSetup.js - FIXED VERSION with proper export
+// src/components/auth/PinSetup.js - AVATAR REMOVED
 import React, { useState } from 'react';
 import {
   View,
@@ -99,8 +99,6 @@ const PinSetup = ({ language, onComplete, user }) => {
       if (pin.length < 6) {
         const newPin = pin + number;
         setPin(newPin);
-        
-        // Auto-advance when PIN is complete
         if (newPin.length === 6) {
           setTimeout(() => {
             setStep(2);
@@ -112,8 +110,6 @@ const PinSetup = ({ language, onComplete, user }) => {
       if (confirmPin.length < 6) {
         const newConfirmPin = confirmPin + number;
         setConfirmPin(newConfirmPin);
-        
-        // Auto-verify when confirm PIN is complete
         if (newConfirmPin.length === 6) {
           setTimeout(() => verifyAndSetupPin(pin, newConfirmPin), 200);
         }
@@ -139,12 +135,9 @@ const PinSetup = ({ language, onComplete, user }) => {
   const verifyAndSetupPin = async (enteredPin, confirmedPin) => {
     try {
       console.log('🔐 Setting up PIN for user:', user?.id);
-      
       if (!user || !user.id) {
         throw new Error('User information is missing');
       }
-      
-      // Check if PINs match
       if (enteredPin !== confirmedPin) {
         shakeError();
         setConfirmPin('');
@@ -152,7 +145,6 @@ const PinSetup = ({ language, onComplete, user }) => {
         return;
       }
 
-      // Validate PIN strength
       const validation = SecurityService.validatePinFormat(enteredPin);
       if (!validation.valid) {
         shakeError();
@@ -164,14 +156,11 @@ const PinSetup = ({ language, onComplete, user }) => {
       }
 
       setLoading(true);
-      
-      // Ensure SecurityService has the correct user ID
       SecurityService.setCurrentUser(user.id);
       console.log('🔐 SecurityService user set to:', user.id);
-      
-      // Setup PIN using SecurityService with explicit user ID
+
       const result = await SecurityService.setupPin(enteredPin, user.id);
-      
+
       if (result.success) {
         console.log('✅ PIN setup successful for user:', user.id);
         Alert.alert(
@@ -286,25 +275,15 @@ const PinSetup = ({ language, onComplete, user }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#05212a" />
       
-      <Animated.View 
-        style={[
-          styles.content,
-          { transform: [{ translateX: shakeAnimation }] }
-        ]}
-      >
+      <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user?.firstName?.[0]?.toUpperCase() || 'U'}
-              </Text>
-            </View>
             <Text style={styles.welcomeText}>
-              Welcome, {user?.firstName || 'User'}!
+              Welcome, {user?.firstName || user?.name || 'User'}!
             </Text>
           </View>
-          
+
           <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
             <Text style={styles.skipButtonText}>{getText('skip')}</Text>
           </TouchableOpacity>
@@ -317,56 +296,53 @@ const PinSetup = ({ language, onComplete, user }) => {
           <View style={[styles.progressDot, step >= 2 && styles.progressDotActive]} />
         </View>
 
-        {/* Title */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>
-            {step === 1 ? getText('setupPin') : getText('confirmPin')}
-          </Text>
-          <Text style={styles.subtitle}>
-            {step === 1 ? getText('setupPinSubtitle') : getText('confirmPinSubtitle')}
-          </Text>
-        </View>
-
-        {/* PIN Dots */}
-        {renderPinDots(step === 1 ? pin : confirmPin)}
-
-        {/* Security Tip */}
-        <View style={styles.securityTip}>
-          <Ionicons name="shield-checkmark" size={16} color="#98DDA6" />
-          <Text style={styles.securityTipText}>
-            {getText('securityTip')}
-          </Text>
-        </View>
-
-        {/* Back Button for Step 2 */}
-        {step === 2 && (
-          <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-            <Ionicons name="arrow-back" size={16} color="#98DDA6" />
-            <Text style={styles.backButtonText}>{getText('back')}</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Number Pad */}
-        {renderNumberPad()}
-
-        {/* Loading Indicator */}
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#98DDA6" />
-            <Text style={styles.loadingText}>{getText('completing')}</Text>
+        <Animated.View 
+          style={[
+            styles.mainContent,
+            { transform: [{ translateX: shakeAnimation }] }
+          ]}
+        >
+          {/* Title */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>
+              {step === 1 ? getText('setupPin') : getText('confirmPin')}
+            </Text>
+            <Text style={styles.subtitle}>
+              {step === 1 ? getText('setupPinSubtitle') : getText('confirmPinSubtitle')}
+            </Text>
           </View>
-        )}
 
-        {/* Debug Info */}
-        {__DEV__ && (
-          <View style={styles.debugContainer}>
-            <Text style={styles.debugText}>Debug: User ID: {user?.id || 'MISSING'}</Text>
-            <Text style={styles.debugText}>Step: {step}</Text>
-            <Text style={styles.debugText}>PIN: {pin}</Text>
-            <Text style={styles.debugText}>Confirm: {confirmPin}</Text>
+          {/* PIN Dots */}
+          {renderPinDots(step === 1 ? pin : confirmPin)}
+
+          {/* Security Tip */}
+          <View style={styles.securityTip}>
+            <Ionicons name="shield-checkmark" size={16} color="#98DDA6" />
+            <Text style={styles.securityTipText}>
+              {getText('securityTip')}
+            </Text>
           </View>
-        )}
-      </Animated.View>
+
+          {/* Back Button for Step 2 */}
+          {step === 2 && (
+            <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+              <Ionicons name="arrow-back" size={16} color="#98DDA6" />
+              <Text style={styles.backButtonText}>{getText('back')}</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Number Pad */}
+          {renderNumberPad()}
+
+          {/* Loading Indicator */}
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#98DDA6" />
+              <Text style={styles.loadingText}>{getText('completing')}</Text>
+            </View>
+          )}
+        </Animated.View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -378,33 +354,19 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
+    marginBottom: 20,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#98DDA6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#05212a',
   },
   welcomeText: {
     fontSize: 18,
@@ -422,7 +384,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 30,
+    marginBottom: 30,
   },
   progressDot: {
     width: 12,
@@ -439,12 +401,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#374151',
     marginHorizontal: 10,
   },
+  mainContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
   titleContainer: {
     alignItems: 'center',
-    marginVertical: 20,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
@@ -460,7 +426,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 30,
+    marginBottom: 20,
   },
   pinDot: {
     width: 20,
@@ -468,7 +434,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: '#374151',
-    marginHorizontal: 12,
+    marginHorizontal: 15,
   },
   pinDotFilled: {
     backgroundColor: '#98DDA6',
@@ -481,7 +447,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(152, 221, 166, 0.1)',
     borderRadius: 12,
     padding: 12,
-    marginVertical: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(152, 221, 166, 0.2)',
     gap: 8,
   },
   securityTipText: {
@@ -503,24 +471,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   numberPad: {
-    flex: 1,
-    justifyContent: 'center',
-    maxHeight: 350,
+    alignSelf: 'center',
+    width: 300,
   },
   numberRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 8,
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
   numberButton: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#1f2937',
+    backgroundColor: '#374151',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: '#4b5563',
   },
   numberButtonEmpty: {
     backgroundColor: 'transparent',
@@ -540,18 +507,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
   },
-  debugContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  debugText: {
-    color: '#9ca3af',
-    fontSize: 12,
-    marginBottom: 2,
-  },
 });
 
-// IMPORTANT: Use export default
 export default PinSetup;

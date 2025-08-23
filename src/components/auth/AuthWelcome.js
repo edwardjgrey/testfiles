@@ -144,13 +144,13 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
             <AkchabarLogo size="medium" />
           </View>
           
-          <Text style={[globalStyles.authTitle, { fontSize: width * 0.065, color: globalStyles.text }]}>
+          <Text style={[globalStyles.authTitle, { fontSize: width * 0.065, color: "white" }]}>
             {t.welcome}
           </Text>
           <Text style={[globalStyles.authSubtitle, { 
             fontSize: width * 0.035,
             marginBottom: 24,
-            color: globalStyles.textDim
+            color:"#a8a8a8ff"
           }]}>
             {language === 'en' ? 'Your money, your future, your control.' : 
              language === 'ru' ? 'Ваши деньги, ваше будущее, ваш контроль.' :
@@ -183,7 +183,7 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
           
           <View style={[globalStyles.dividerRow, { marginVertical: 8 }]}>
             <View style={globalStyles.divider} />
-            <Text style={[globalStyles.dividerText, { color: globalStyles.textDim }]}>
+            <Text style={[globalStyles.dividerText, { color: "white"}]}>
               {t.or || 'or'}
             </Text>
             <View style={globalStyles.divider} />
@@ -222,7 +222,7 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
         
         {/* Sign In Link */}
         <View style={[globalStyles.authCard, globalStyles.signInCard, { marginTop: 12 }]}>
-          <Text style={[globalStyles.alreadyAccountText, { color: globalStyles.textDim }]}>
+          <Text style={[globalStyles.alreadyAccountText, { color: "white" }]}>
             {t.alreadyAccount || 'Already have an account?'}{' '}
             <Text
               style={[globalStyles.linkText, { color: globalStyles.primary }]}
@@ -241,7 +241,7 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
         }}>
           <Text style={[globalStyles.footerText, { 
             fontSize: width * 0.03,
-            color: globalStyles.textDim,
+            color: "white",
             textAlign: 'center'
           }]}>
             {language === 'en' ? 'By signing up you agree to our ' : 
@@ -249,7 +249,7 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
              'Каттолуп, биздин '}
             <Text 
               style={[globalStyles.linkText, { 
-                color: '#6d28d9', 
+                color: '#98DDA6', 
                 textDecorationLine: 'underline'
               }]}
               onPress={openTerms}
@@ -263,7 +263,7 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
              ' жана '}
             <Text 
               style={[globalStyles.linkText, { 
-                color: '#6d28d9', 
+                color: '#98DDA6', 
                 textDecorationLine: 'underline'
               }]}
               onPress={openPrivacy}

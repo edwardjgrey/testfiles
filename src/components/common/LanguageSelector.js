@@ -23,11 +23,11 @@ const LanguageSelector = ({ language, setLanguage }) => {
         style={globalStyles.languageButton}
         onPress={() => setIsOpen(!isOpen)}
       >
-        <Ionicons name="globe-outline" size={16} color="#000" />
+        <Ionicons name="globe-outline" size={16} color="#ffffffff" />
         <Text style={globalStyles.languageText}>
           {languages.find(l => l.code === language)?.flag}
         </Text>
-        <Ionicons name="chevron-down" size={14} color="#000" />
+        <Ionicons name="chevron-down" size={14} color="#ffffffff" />
       </TouchableOpacity>
       
       <Modal
