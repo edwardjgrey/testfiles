@@ -137,7 +137,7 @@ const OnboardingFlow = ({ language, setLanguage, onComplete }) => {
             <View style={[styles.iconCircle, { backgroundColor: currentData.gradient[0] + '20' }]}>
               <Ionicons 
                 name={currentData.icon} 
-                size={60} 
+                size={80} 
                 color={currentData.iconColor} 
               />
             </View>
@@ -231,7 +231,7 @@ const styles = {
     paddingTop: 60, // Adjusted spacing
   },
   illustrationContainer: {
-    height: height * 0.35,
+    height: height * 0.45,
     marginHorizontal: 20,
     borderRadius: 30,
     backgroundColor: '#667eea',
@@ -239,12 +239,12 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    marginBottom: 30,
+    marginBottom: 40,
   },
   iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -277,9 +277,7 @@ const styles = {
   textContainer: {
     paddingHorizontal: 30,
     alignItems: 'center',
-    marginBottom: 50,
-    flex: 1,
-    justifyContent: 'center',
+    marginBottom: 40,
   },
   title: {
     fontSize: 32,

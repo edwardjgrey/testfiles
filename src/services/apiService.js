@@ -31,31 +31,12 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      
-      console.log('📥 Response status:', response.status);
-      
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type');
-      const isJson = contentType && contentType.includes('application/json');
-      
-      let data;
-      if (isJson) {
-        data = await response.json();
-        console.log('📥 Response data:', data);
-      } else {
-        // Handle non-JSON responses (like HTML error pages)
-        const text = await response.text();
-        console.log('📥 Response text (first 200 chars):', text.substring(0, 200));
-        
-        if (!response.ok) {
-          throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}`);
-        }
-        
-        // For successful non-JSON responses, return a success object
-        data = { success: true, message: 'Request completed' };
-      }
+      const data = await response.json();
 
-      if (!response.ok && isJson) {
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response data:', data);
+
+      if (!response.ok) {
         console.error(`❌ API Error (${endpoint}):`, data);
         throw new Error(data.error || data.message || 'Request failed');
       }
@@ -124,16 +105,9 @@ class ApiService {
     }
   }
 
-  // Validate token method (FIXED)
+  // Validate token method (MISSING)
   static async validateToken() {
     try {
-      const token = await this.getToken();
-      
-      if (!token) {
-        console.log('🔍 No token found - user not authenticated');
-        return { success: false, error: 'No token found' };
-      }
-      
       console.log('🔍 Validating auth token');
       
       const response = await this.makeRequest('/auth/validate', {
@@ -143,13 +117,6 @@ class ApiService {
       return response;
     } catch (error) {
       console.error('❌ Token validation failed:', error);
-      
-      // If token is invalid, remove it
-      if (error.message.includes('token') || error.message.includes('unauthorized')) {
-        await this.removeToken();
-        console.log('🗑️ Removed invalid token');
-      }
-      
       return { success: false, error: error.message };
     }
   }
@@ -290,28 +257,30 @@ class ApiService {
   }
 
   // Sign out
- static async signOut() {
-  try {
-    console.log('👋 Signing out user');
-    
-    // Skip server logout entirely since it's causing issues
-    // Just remove the local token - this is what actually signs the user out
-    await this.removeToken();
-    console.log('✅ User signed out successfully');
-    
-    return { success: true };
-  } catch (error) {
-    console.error('❌ Sign out failed:', error);
-    // Even if there's an error, try to remove the token
+  static async signOut() {
     try {
+      console.log('👋 Signing out user');
+      
+      // Call logout endpoint if available
+      try {
+        await this.makeRequest('/auth/logout', {
+          method: 'POST',
+        });
+      } catch (error) {
+        // Ignore logout endpoint errors
+        console.log('⚠️ Logout endpoint not available or failed');
+      }
+
+      // Remove token regardless
       await this.removeToken();
-      console.log('✅ Token removed despite error');
-    } catch (tokenError) {
-      console.error('❌ Failed to remove token:', tokenError);
+      console.log('✅ User signed out');
+      
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Sign out failed:', error);
+      return { success: false, error: error.message };
     }
-    return { success: false, error: error.message };
   }
-}
 
   // ===== FINANCE API METHODS =====
 

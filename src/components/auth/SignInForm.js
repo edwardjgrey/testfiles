@@ -661,15 +661,16 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                     <Ionicons name="chevron-down" size={14} color="#9ca3af" />
                   </TouchableOpacity>
                   
-                  <TextInput
-                    style={globalStyles.phoneInput}
-                    placeholder={selectedCountry?.format?.replace(/X/g, '0') || "555 123 456"}
-                    placeholderTextColor="#9ca3af"
-                    value={phone}
-                    onChangeText={(text) => setPhone(formatPhone(text, selectedCountry))}
-                    maxLength={selectedCountry?.length + 2 || 13} // +2 for spaces
-                    keyboardType="phone-pad"
-                  />
+                  // Update the onChangeText handler:
+<TextInput
+  style={globalStyles.phoneInput}
+  placeholder={selectedCountry?.format?.replace(/X/g, '0') || "555 123 456"}
+  placeholderTextColor="#9ca3af"
+  value={phone}
+  onChangeText={(text) => setPhone(formatPhone(text, selectedCountry))}
+  maxLength={selectedCountry?.length + 2 || 13} // +2 for spaces
+  keyboardType="phone-pad"
+/>
                 </View>
                 
                 <Text style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
