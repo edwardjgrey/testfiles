@@ -1,4 +1,4 @@
-// src/utils/translations.js - Updated with all requested changes
+// src/utils/translations.js - UPDATED with new features
 export const translations = {
   en: {
     welcome: 'Welcome to Akchabar!',
@@ -31,7 +31,7 @@ export const translations = {
     planSubtitle: 'Select the perfect plan for your financial journey',
     financialSetup: 'Financial Setup',
     financialSubtitle: 'Help us personalize your experience',
-    monthlyIncome: 'Monthly Income',
+    monthlyIncome: 'Primary Monthly Income',
     additionalIncome: 'Additional Income Sources',
     additionalIncomeHint: 'Freelance, investments, side business, etc.',
     setBudgets: 'Set Your Budgets',
@@ -54,6 +54,19 @@ export const translations = {
     selectFile: 'Select File',
     fileSelected: 'File selected',
     agreeToTerms: 'By creating an account, you agree to our Terms of Service and Privacy Policy',
+    
+    // NEW: Goals Setup
+    setGoals: 'Set Your Financial Goals',
+    goalsSubtitle: 'What are you saving for? Set goals to stay motivated.',
+    addGoal: 'Add Goal',
+    goalName: 'Goal Name',
+    targetAmount: 'Target Amount',
+    targetDate: 'Target Date',
+    goalDescription: 'Description',
+    goalsSetupComplete: 'Goals Setup Complete',
+    noGoalsYet: 'No goals yet',
+    addFirstGoal: 'Add your first financial goal',
+    totalGoalsAmount: 'Total Goals Target',
   },
   ru: {
     welcome: 'Добро пожаловать в Акчабар!',
@@ -86,7 +99,7 @@ export const translations = {
     planSubtitle: 'Выберите идеальный план для вашего финансового пути',
     financialSetup: 'Финансовая настройка',
     financialSubtitle: 'Поможем персонализировать ваш опыт',
-    monthlyIncome: 'Месячный доход',
+    monthlyIncome: 'Основной месячный доход',
     additionalIncome: 'Дополнительные источники дохода',
     additionalIncomeHint: 'Фриланс, инвестиции, побочный бизнес и т.д.',
     setBudgets: 'Установите бюджеты',
@@ -109,6 +122,19 @@ export const translations = {
     selectFile: 'Выбрать файл',
     fileSelected: 'Файл выбран',
     agreeToTerms: 'Создавая аккаунт, вы соглашаетесь с нашими Условиями использования и Политикой конфиденциальности',
+    
+    // NEW: Goals Setup
+    setGoals: 'Установите финансовые цели',
+    goalsSubtitle: 'На что вы копите? Установите цели для мотивации.',
+    addGoal: 'Добавить цель',
+    goalName: 'Название цели',
+    targetAmount: 'Целевая сумма',
+    targetDate: 'Целевая дата',
+    goalDescription: 'Описание',
+    goalsSetupComplete: 'Настройка целей завершена',
+    noGoalsYet: 'Пока нет целей',
+    addFirstGoal: 'Добавьте первую финансовую цель',
+    totalGoalsAmount: 'Общая сумма целей',
   },
   ky: {
     welcome: 'Акчабарга кош келиңиз!',
@@ -141,7 +167,7 @@ export const translations = {
     planSubtitle: 'Каржылык сапарыңыз үчүн эң жакшы планды тандаңыз',
     financialSetup: 'Каржылык жөндөө',
     financialSubtitle: 'Тажрыйбаңызды жекелештирүүгө жардам берели',
-    monthlyIncome: 'Айлык киреше',
+    monthlyIncome: 'Негизги айлык киреше',
     additionalIncome: 'Кошумча киреше булактары',
     additionalIncomeHint: 'Фриланс, инвестициялар, кошумча бизнес ж.б.',
     setBudgets: 'Бюджеттерди коюңуз',
@@ -164,15 +190,26 @@ export const translations = {
     selectFile: 'Файл тандоо',
     fileSelected: 'Файл тандалды',
     agreeToTerms: 'Аккаунт түзүп, биздин Колдонуу шарттары жана Купуялык саясаты менен макулсуз',
+    
+    // NEW: Goals Setup
+    setGoals: 'Каржылык максаттарды коюңуз',
+    goalsSubtitle: 'Эмеге топтойсуз? Мотивация үчүн максаттарды коюңуз.',
+    addGoal: 'Максат кошуу',
+    goalName: 'Максаттын аталышы',
+    targetAmount: 'Максаттуу сумма',
+    targetDate: 'Максаттуу күн',
+    goalDescription: 'Сүрөттөмө',
+    goalsSetupComplete: 'Максаттарды жөндөө аяктады',
+    noGoalsYet: 'Азырынча максаттар жок',
+    addFirstGoal: 'Биринчи каржылык максатты кошуңуз',
+    totalGoalsAmount: 'Максаттардын жалпы суммасы',
   }
 };
 
-// UPDATED: Country codes with Uzbekistan and SMS login support
-// src/utils/translations.js - Lines 85-95 (countryCodes section)
-
+// Country codes with Uzbekistan and SMS login support
 export const countryCodes = [
   { code: '+996', flag: '🇰🇬', country: 'Kyrgyzstan' },
-  { code: '+998', flag: '🇺🇿', country: 'Uzbekistan' }, // Added Uzbekistan
+  { code: '+998', flag: '🇺🇿', country: 'Uzbekistan' },
   { code: '+1', flag: '🇺🇸', country: 'USA' },
   { code: '+44', flag: '🇬🇧', country: 'UK' },
   { code: '+7', flag: '🇷🇺', country: 'Russia' },
@@ -180,7 +217,90 @@ export const countryCodes = [
   { code: '+992', flag: '🇹🇯', country: 'Tajikistan' }
 ];
 
-// UPDATED: Plan information with more details and GBP pricing
+// UPDATED: Additional income types for financial setup
+export const additionalIncomeTypes = {
+  en: [
+    'Freelance Work',
+    'Side Business', 
+    'Investment Returns',
+    'Rental Income',
+    'Part-time Job',
+    'Consulting',
+    'Online Sales',
+    'Cryptocurrency',
+    'Dividends',
+    'Grants/Scholarships',
+    'Royalties',
+    'Other'
+  ],
+  ru: [
+    'Фриланс',
+    'Побочный бизнес',
+    'Доходы от инвестиций', 
+    'Доходы от аренды',
+    'Подработка',
+    'Консалтинг',
+    'Онлайн продажи',
+    'Криптовалюта',
+    'Дивиденды',
+    'Гранты/Стипендии',
+    'Роялти',
+    'Другое'
+  ],
+  ky: [
+    'Фриланс иш',
+    'Кошумча бизнес',
+    'Инвестициядан киреше',
+    'Ижарага берүүдөн киреше',
+    'Жарым күндүк иш',
+    'Консультация',
+    'Онлайн сатуу',
+    'Криптовалюта',
+    'Дивиденддер',
+    'Гранттар/Стипендиялар',
+    'Роялти',
+    'Башка'
+  ]
+};
+
+// File upload support types for statements
+export const supportedFileTypes = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png', 
+  'text/csv',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+];
+
+export const fileTypeLabels = {
+  en: {
+    'application/pdf': 'PDF Documents',
+    'image/jpeg': 'JPEG Images',
+    'image/png': 'PNG Images',
+    'text/csv': 'CSV Files',
+    'application/vnd.ms-excel': 'Excel Files',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel Files'
+  },
+  ru: {
+    'application/pdf': 'PDF документы',
+    'image/jpeg': 'JPEG изображения',
+    'image/png': 'PNG изображения', 
+    'text/csv': 'CSV файлы',
+    'application/vnd.ms-excel': 'Excel файлы',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel файлы'
+  },
+  ky: {
+    'application/pdf': 'PDF документтер',
+    'image/jpeg': 'JPEG сүрөттөр',
+    'image/png': 'PNG сүрөттөр',
+    'text/csv': 'CSV файлдар',
+    'application/vnd.ms-excel': 'Excel файлдар',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel файлдар'
+  }
+};
+
+// UPDATED: Plan details with enhanced features
 export const planDetails = {
   basic: {
     name: 'Basic',
@@ -411,109 +531,3 @@ export const planComparison = {
     {
       name: { en: 'Data Export', ru: 'Экспорт данных', ky: 'Маалымат экспорту' },
       basic: '❌',
-      plus: '✅',
-      pro: '✅'
-    },
-    {
-      name: { en: 'Bank Sync', ru: 'Синхронизация с банком', ky: 'Банк менен синхрондоо' },
-      basic: '❌',
-      plus: '✅',
-      pro: '✅'
-    },
-    {
-      name: { en: 'Family Sharing', ru: 'Семейный доступ', ky: 'Үй-бүлөлүк кирүү' },
-      basic: '❌',
-      plus: '❌',
-      pro: '✅ (5 members)'
-    },
-    {
-      name: { en: 'Priority Support', ru: 'Приоритетная поддержка', ky: 'Биринчи кезектеги колдоо' },
-      basic: '❌',
-      plus: 'Email',
-      pro: '24/7 Phone & Chat'
-    },
-    {
-      name: { en: 'Investment Tracking', ru: 'Отслеживание инвестиций', ky: 'Инвестиция көзөмөлү' },
-      basic: '❌',
-      plus: 'Basic',
-      pro: 'Advanced'
-    }
-  ]
-};
-
-// Financial setup options for additional income sources
-export const additionalIncomeTypes = {
-  en: [
-    'Freelance Work',
-    'Side Business', 
-    'Investment Returns',
-    'Rental Income',
-    'Part-time Job',
-    'Consulting',
-    'Online Sales',
-    'Cryptocurrency',
-    'Dividends',
-    'Other'
-  ],
-  ru: [
-    'Фриланс',
-    'Побочный бизнес',
-    'Доходы от инвестиций', 
-    'Доходы от аренды',
-    'Подработка',
-    'Консалтинг',
-    'Онлайн продажи',
-    'Криптовалюта',
-    'Дивиденды',
-    'Другое'
-  ],
-  ky: [
-    'Фриланс иш',
-    'Кошумча бизнес',
-    'Инвестициядан киреше',
-    'Ижарага берүүдөн киреше',
-    'Жарым күндүк иш',
-    'Консультация',
-    'Онлайн сатуу',
-    'Криптовалюта',
-    'Дивиденддер',
-    'Башка'
-  ]
-};
-
-// File upload support types for statements
-export const supportedFileTypes = [
-  'application/pdf',
-  'image/jpeg',
-  'image/png', 
-  'text/csv',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-];
-
-export const fileTypeLabels = {
-  en: {
-    'application/pdf': 'PDF Documents',
-    'image/jpeg': 'JPEG Images',
-    'image/png': 'PNG Images',
-    'text/csv': 'CSV Files',
-    'application/vnd.ms-excel': 'Excel Files',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel Files'
-  },
-  ru: {
-    'application/pdf': 'PDF документы',
-    'image/jpeg': 'JPEG изображения',
-    'image/png': 'PNG изображения', 
-    'text/csv': 'CSV файлы',
-    'application/vnd.ms-excel': 'Excel файлы',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel файлы'
-  },
-  ky: {
-    'application/pdf': 'PDF документтер',
-    'image/jpeg': 'JPEG сүрөттөр',
-    'image/png': 'PNG сүрөттөр',
-    'text/csv': 'CSV файлдар',
-    'application/vnd.ms-excel': 'Excel файлдар',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel файлдар'
-  }
-};
