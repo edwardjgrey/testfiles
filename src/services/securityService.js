@@ -1,35 +1,41 @@
-// src/services/securityService.js - FIXED VERSION with user-specific PIN storage
+// src/services/securityService.js - FIXED VERSION with setCurrentUser method
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import { Alert } from 'react-native';
 
 class SecurityService {
   constructor() {
-    this.currentUserId = null;
+    // Base keys - will be combined with user ID for user-specific storage
+    this.PIN_KEY_BASE = 'user_pin_hash';
+    this.PIN_SALT_KEY_BASE = 'user_pin_salt';
+    this.PIN_SETUP_KEY_BASE = 'pin_setup_complete';
+    this.FAILED_ATTEMPTS_KEY_BASE = 'pin_failed_attempts';
+    this.LOCKOUT_TIME_KEY_BASE = 'pin_lockout_time';
+    
     this.MAX_ATTEMPTS = 5;
     this.LOCKOUT_DURATION = 30 * 60 * 1000; // 30 minutes
+    
+    // Current user tracking
+    this.currentUserId = null;
   }
 
-  // Set current user ID for PIN operations
+  // Set current user ID for operations
   setCurrentUser(userId) {
-    console.log('🔐 Setting current user for PIN operations:', userId);
+    console.log('🔐 SecurityService: Setting current user to:', userId);
     this.currentUserId = userId;
   }
 
-  // Get user-specific keys
-  getUserKeys(userId = null) {
-    const id = userId || this.currentUserId;
-    if (!id) {
-      throw new Error('No user ID set for PIN operations');
+  // Get current user ID
+  getCurrentUser() {
+    return this.currentUserId;
+  }
+
+  // Helper function to generate user-specific keys
+  getUserSpecificKey(baseKey, userId) {
+    if (!userId) {
+      throw new Error('User ID is required for PIN operations');
     }
-    
-    return {
-      PIN_KEY: `user_pin_hash_${id}`,
-      PIN_SALT_KEY: `user_pin_salt_${id}`,
-      PIN_SETUP_KEY: `pin_setup_complete_${id}`,
-      FAILED_ATTEMPTS_KEY: `pin_failed_attempts_${id}`,
-      LOCKOUT_TIME_KEY: `pin_lockout_time_${id}`
-    };
+    return `${baseKey}_${userId}`;
   }
 
   // Generate a random salt for PIN hashing
@@ -44,41 +50,33 @@ class SecurityService {
     return await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, pinWithSalt);
   }
 
-  // Setup PIN for the first time
+  // Setup PIN for a specific user - FIXED VERSION
   async setupPin(pin, userId) {
     try {
       console.log('🔐 Setting up PIN for user:', userId);
-      
-      // Set current user
-      this.setCurrentUser(userId);
-      const keys = this.getUserKeys(userId);
+
+      if (!userId) {
+        throw new Error('User ID is required to setup PIN');
+      }
 
       // Validate PIN
       if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
         throw new Error('PIN must be exactly 6 digits');
       }
 
-      // Check if PIN already exists for this user
-      const existingPin = await SecureStore.getItemAsync(keys.PIN_KEY);
-      if (existingPin) {
-        console.log('⚠️ PIN already exists for user:', userId, '- removing old PIN first');
-        await this.removeExistingPin(userId);
-      }
+      // Generate user-specific keys
+      const pinKey = this.getUserSpecificKey(this.PIN_KEY_BASE, userId);
+      const saltKey = this.getUserSpecificKey(this.PIN_SALT_KEY_BASE, userId);
+      const setupKey = this.getUserSpecificKey(this.PIN_SETUP_KEY_BASE, userId);
 
       // Generate salt and hash PIN
       const salt = await this.generateSalt();
       const hashedPin = await this.hashPin(pin, salt);
 
-      console.log('💾 Storing PIN with keys:', {
-        pinKey: keys.PIN_KEY,
-        saltKey: keys.PIN_SALT_KEY,
-        setupKey: keys.PIN_SETUP_KEY
-      });
-
       // Store securely with user-specific keys
-      await SecureStore.setItemAsync(keys.PIN_KEY, hashedPin);
-      await SecureStore.setItemAsync(keys.PIN_SALT_KEY, salt);
-      await SecureStore.setItemAsync(keys.PIN_SETUP_KEY, 'true');
+      await SecureStore.setItemAsync(pinKey, hashedPin);
+      await SecureStore.setItemAsync(saltKey, salt);
+      await SecureStore.setItemAsync(setupKey, 'true');
 
       // Reset any failed attempts for this user
       await this.resetFailedAttempts(userId);
@@ -86,38 +84,22 @@ class SecurityService {
       console.log('✅ PIN setup completed successfully for user:', userId);
       return { success: true };
     } catch (error) {
-      console.error('❌ PIN setup failed:', error);
+      console.error('❌ PIN setup failed for user:', userId, error);
       return { success: false, error: error.message };
     }
   }
 
-  // Remove existing PIN for user
-  async removeExistingPin(userId) {
+  // Verify PIN for a specific user - FIXED VERSION
+  async verifyPin(enteredPin, userId) {
     try {
-      const keys = this.getUserKeys(userId);
-      await SecureStore.deleteItemAsync(keys.PIN_KEY);
-      await SecureStore.deleteItemAsync(keys.PIN_SALT_KEY);
-      await SecureStore.deleteItemAsync(keys.PIN_SETUP_KEY);
-      await this.resetFailedAttempts(userId);
-      console.log('🗑️ Removed existing PIN for user:', userId);
-    } catch (error) {
-      console.error('Error removing existing PIN:', error);
-    }
-  }
+      console.log('🔍 Verifying PIN for user:', userId);
 
-  // Verify PIN
-  async verifyPin(enteredPin, userId = null) {
-    try {
-      const id = userId || this.currentUserId;
-      if (!id) {
-        throw new Error('No user ID provided for PIN verification');
+      if (!userId) {
+        throw new Error('User ID is required to verify PIN');
       }
 
-      console.log('🔍 Verifying PIN for user:', id);
-      const keys = this.getUserKeys(id);
-
       // Check if user is locked out
-      const lockoutCheck = await this.checkLockout(id);
+      const lockoutCheck = await this.checkLockout(userId);
       if (!lockoutCheck.allowed) {
         return {
           success: false,
@@ -129,51 +111,39 @@ class SecurityService {
 
       // Validate input
       if (!enteredPin || enteredPin.length !== 6 || !/^\d{6}$/.test(enteredPin)) {
-        await this.incrementFailedAttempts(id);
+        await this.incrementFailedAttempts(userId);
         return { success: false, error: 'Invalid PIN format' };
       }
 
-      // Get stored PIN hash and salt for this specific user
-      const storedHash = await SecureStore.getItemAsync(keys.PIN_KEY);
-      const salt = await SecureStore.getItemAsync(keys.PIN_SALT_KEY);
+      // Generate user-specific keys
+      const pinKey = this.getUserSpecificKey(this.PIN_KEY_BASE, userId);
+      const saltKey = this.getUserSpecificKey(this.PIN_SALT_KEY_BASE, userId);
 
-      console.log('🔍 PIN verification details:', {
-        userId: id,
-        hasStoredHash: !!storedHash,
-        hasSalt: !!salt,
-        pinKey: keys.PIN_KEY,
-        saltKey: keys.PIN_SALT_KEY
-      });
+      // Get stored PIN hash and salt for this user
+      const storedHash = await SecureStore.getItemAsync(pinKey);
+      const salt = await SecureStore.getItemAsync(saltKey);
 
       if (!storedHash || !salt) {
-        console.log('❌ No PIN found for user:', id);
         return { success: false, error: 'PIN not set up for this user' };
       }
 
       // Hash entered PIN with stored salt
       const enteredHash = await this.hashPin(enteredPin, salt);
 
-      console.log('🔍 Hash comparison:', {
-        enteredPinLength: enteredPin.length,
-        storedHashLength: storedHash.length,
-        enteredHashLength: enteredHash.length,
-        hashesMatch: enteredHash === storedHash
-      });
-
       // Compare hashes
       if (enteredHash === storedHash) {
-        console.log('✅ PIN verified successfully for user:', id);
-        await this.resetFailedAttempts(id);
+        console.log('✅ PIN verified successfully for user:', userId);
+        await this.resetFailedAttempts(userId);
         return { success: true };
       } else {
-        console.log('❌ PIN verification failed for user:', id);
-        await this.incrementFailedAttempts(id);
+        console.log('❌ PIN verification failed for user:', userId);
+        await this.incrementFailedAttempts(userId);
         
-        const attempts = await this.getFailedAttempts(id);
+        const attempts = await this.getFailedAttempts(userId);
         const remainingAttempts = this.MAX_ATTEMPTS - attempts;
         
         if (remainingAttempts <= 0) {
-          await this.setLockout(id);
+          await this.setLockout(userId);
           return {
             success: false,
             error: 'Too many failed attempts. Account locked for 30 minutes.',
@@ -188,44 +158,35 @@ class SecurityService {
         };
       }
     } catch (error) {
-      console.error('❌ PIN verification error:', error);
+      console.error('❌ PIN verification error for user:', userId, error);
       return { success: false, error: 'PIN verification failed' };
     }
   }
 
-  // Check if PIN is set up for specific user
-  async isPinSetup(userId = null) {
+  // Check if PIN is set up for a specific user - FIXED VERSION
+  async isPinSetup(userId) {
     try {
-      const id = userId || this.currentUserId;
-      if (!id) {
-        console.log('⚠️ No user ID provided for PIN setup check');
+      if (!userId) {
         return false;
       }
-
-      const keys = this.getUserKeys(id);
-      const isSetup = await SecureStore.getItemAsync(keys.PIN_SETUP_KEY);
-      const hasPin = await SecureStore.getItemAsync(keys.PIN_KEY);
       
-      console.log('🔍 PIN setup check for user:', id, {
-        setupFlag: isSetup === 'true',
-        hasPin: !!hasPin,
-        setupKey: keys.PIN_SETUP_KEY
-      });
-      
-      return isSetup === 'true' && !!hasPin;
+      const setupKey = this.getUserSpecificKey(this.PIN_SETUP_KEY_BASE, userId);
+      const isSetup = await SecureStore.getItemAsync(setupKey);
+      return isSetup === 'true';
     } catch (error) {
-      console.error('Check PIN setup error:', error);
+      console.error('Check PIN setup error for user:', userId, error);
       return false;
     }
   }
 
-  // Change PIN (requires old PIN)
+  // Change PIN for a specific user - FIXED VERSION
   async changePin(oldPin, newPin, userId) {
     try {
       console.log('🔄 Changing PIN for user:', userId);
-      
-      // Set current user
-      this.setCurrentUser(userId);
+
+      if (!userId) {
+        throw new Error('User ID is required to change PIN');
+      }
 
       // Verify old PIN first
       const oldPinVerification = await this.verifyPin(oldPin, userId);
@@ -233,92 +194,108 @@ class SecurityService {
         return { success: false, error: 'Current PIN is incorrect' };
       }
 
-      // Remove old PIN and setup new one
-      await this.removeExistingPin(userId);
+      // Setup new PIN
       return await this.setupPin(newPin, userId);
     } catch (error) {
-      console.error('❌ PIN change failed:', error);
+      console.error('❌ PIN change failed for user:', userId, error);
       return { success: false, error: error.message };
     }
   }
 
-  // Remove PIN (requires PIN verification)
-  async removePin(pin, userId = null) {
+  // Remove PIN for a specific user - FIXED VERSION
+  async removePin(pin, userId) {
     try {
-      const id = userId || this.currentUserId;
-      console.log('🗑️ Removing PIN for user:', id);
+      console.log('🗑️ Removing PIN for user:', userId);
+
+      if (!userId) {
+        throw new Error('User ID is required to remove PIN');
+      }
 
       // Verify PIN first
-      const verification = await this.verifyPin(pin, id);
+      const verification = await this.verifyPin(pin, userId);
       if (!verification.success) {
         return { success: false, error: 'Incorrect PIN' };
       }
 
-      // Remove all PIN-related data for this user
-      await this.removeExistingPin(id);
+      // Generate user-specific keys
+      const pinKey = this.getUserSpecificKey(this.PIN_KEY_BASE, userId);
+      const saltKey = this.getUserSpecificKey(this.PIN_SALT_KEY_BASE, userId);
+      const setupKey = this.getUserSpecificKey(this.PIN_SETUP_KEY_BASE, userId);
 
-      console.log('✅ PIN removed successfully for user:', id);
+      // Remove all PIN-related data for this user
+      await SecureStore.deleteItemAsync(pinKey);
+      await SecureStore.deleteItemAsync(saltKey);
+      await SecureStore.deleteItemAsync(setupKey);
+      await this.resetFailedAttempts(userId);
+
+      console.log('✅ PIN removed successfully for user:', userId);
       return { success: true };
     } catch (error) {
-      console.error('❌ PIN removal failed:', error);
+      console.error('❌ PIN removal failed for user:', userId, error);
       return { success: false, error: error.message };
     }
   }
 
-  // Failed attempts management (user-specific)
-  async getFailedAttempts(userId = null) {
+  // Failed attempts management for specific user - FIXED VERSION
+  async getFailedAttempts(userId) {
     try {
-      const id = userId || this.currentUserId;
-      const keys = this.getUserKeys(id);
-      const attempts = await SecureStore.getItemAsync(keys.FAILED_ATTEMPTS_KEY);
+      if (!userId) return 0;
+      
+      const attemptsKey = this.getUserSpecificKey(this.FAILED_ATTEMPTS_KEY_BASE, userId);
+      const attempts = await SecureStore.getItemAsync(attemptsKey);
       return parseInt(attempts) || 0;
     } catch (error) {
       return 0;
     }
   }
 
-  async incrementFailedAttempts(userId = null) {
+  async incrementFailedAttempts(userId) {
     try {
-      const id = userId || this.currentUserId;
-      const keys = this.getUserKeys(id);
-      const current = await this.getFailedAttempts(id);
-      await SecureStore.setItemAsync(keys.FAILED_ATTEMPTS_KEY, (current + 1).toString());
-      console.log('📈 Incremented failed attempts for user:', id, 'to:', current + 1);
+      if (!userId) return;
+      
+      const attemptsKey = this.getUserSpecificKey(this.FAILED_ATTEMPTS_KEY_BASE, userId);
+      const current = await this.getFailedAttempts(userId);
+      await SecureStore.setItemAsync(attemptsKey, (current + 1).toString());
     } catch (error) {
-      console.error('Increment failed attempts error:', error);
+      console.error('Increment failed attempts error for user:', userId, error);
     }
   }
 
-  async resetFailedAttempts(userId = null) {
+  async resetFailedAttempts(userId) {
     try {
-      const id = userId || this.currentUserId;
-      const keys = this.getUserKeys(id);
-      await SecureStore.deleteItemAsync(keys.FAILED_ATTEMPTS_KEY);
-      await SecureStore.deleteItemAsync(keys.LOCKOUT_TIME_KEY);
-      console.log('🔄 Reset failed attempts for user:', id);
+      if (!userId) return;
+      
+      const attemptsKey = this.getUserSpecificKey(this.FAILED_ATTEMPTS_KEY_BASE, userId);
+      const lockoutKey = this.getUserSpecificKey(this.LOCKOUT_TIME_KEY_BASE, userId);
+      
+      await SecureStore.deleteItemAsync(attemptsKey);
+      await SecureStore.deleteItemAsync(lockoutKey);
     } catch (error) {
-      console.error('Reset failed attempts error:', error);
+      console.error('Reset failed attempts error for user:', userId, error);
     }
   }
 
-  // Lockout management (user-specific)
-  async setLockout(userId = null) {
+  // Lockout management for specific user - FIXED VERSION
+  async setLockout(userId) {
     try {
-      const id = userId || this.currentUserId;
-      const keys = this.getUserKeys(id);
+      if (!userId) return;
+      
+      const lockoutKey = this.getUserSpecificKey(this.LOCKOUT_TIME_KEY_BASE, userId);
       const lockoutTime = Date.now() + this.LOCKOUT_DURATION;
-      await SecureStore.setItemAsync(keys.LOCKOUT_TIME_KEY, lockoutTime.toString());
-      console.log('🔒 Set lockout for user:', id, 'until:', new Date(lockoutTime));
+      await SecureStore.setItemAsync(lockoutKey, lockoutTime.toString());
     } catch (error) {
-      console.error('Set lockout error:', error);
+      console.error('Set lockout error for user:', userId, error);
     }
   }
 
-  async checkLockout(userId = null) {
+  async checkLockout(userId) {
     try {
-      const id = userId || this.currentUserId;
-      const keys = this.getUserKeys(id);
-      const lockoutTimeStr = await SecureStore.getItemAsync(keys.LOCKOUT_TIME_KEY);
+      if (!userId) {
+        return { allowed: true };
+      }
+      
+      const lockoutKey = this.getUserSpecificKey(this.LOCKOUT_TIME_KEY_BASE, userId);
+      const lockoutTimeStr = await SecureStore.getItemAsync(lockoutKey);
       
       if (!lockoutTimeStr) {
         return { allowed: true };
@@ -334,20 +311,19 @@ class SecurityService {
         };
       } else {
         // Lockout expired, reset
-        await this.resetFailedAttempts(id);
+        await this.resetFailedAttempts(userId);
         return { allowed: true };
       }
     } catch (error) {
-      console.error('Check lockout error:', error);
+      console.error('Check lockout error for user:', userId, error);
       return { allowed: true };
     }
   }
 
-  // Get security status for specific user
-  async getSecurityStatus(userId = null) {
+  // Get security status for specific user - FIXED VERSION
+  async getSecurityStatus(userId) {
     try {
-      const id = userId || this.currentUserId;
-      if (!id) {
+      if (!userId) {
         return {
           pinSetup: false,
           failedAttempts: 0,
@@ -356,15 +332,9 @@ class SecurityService {
         };
       }
 
-      const isPinSetup = await this.isPinSetup(id);
-      const failedAttempts = await this.getFailedAttempts(id);
-      const lockoutCheck = await this.checkLockout(id);
-
-      console.log('📊 Security status for user:', id, {
-        pinSetup: isPinSetup,
-        failedAttempts,
-        isLockedOut: !lockoutCheck.allowed
-      });
+      const isPinSetup = await this.isPinSetup(userId);
+      const failedAttempts = await this.getFailedAttempts(userId);
+      const lockoutCheck = await this.checkLockout(userId);
 
       return {
         pinSetup: isPinSetup,
@@ -373,7 +343,7 @@ class SecurityService {
         lockoutRemainingTime: lockoutCheck.remainingTime || 0
       };
     } catch (error) {
-      console.error('Get security status error:', error);
+      console.error('Get security status error for user:', userId, error);
       return {
         pinSetup: false,
         failedAttempts: 0,
@@ -383,7 +353,7 @@ class SecurityService {
     }
   }
 
-  // Validate PIN format
+  // Validate PIN format (unchanged)
   validatePinFormat(pin) {
     if (!pin) {
       return { valid: false, error: 'PIN is required' };
@@ -411,26 +381,41 @@ class SecurityService {
     return { valid: true };
   }
 
-  // Emergency PIN reset (for development/testing) - removes ALL user PINs
-  async emergencyReset() {
+  // Emergency PIN reset for specific user - FIXED VERSION
+  async emergencyReset(userId = null) {
     try {
-      console.log('🚨 Emergency PIN reset - removing ALL user PINs');
+      console.log('🚨 Emergency PIN reset for user:', userId || 'ALL USERS');
       
-      // This is a nuclear option - removes all PIN data
-      const allKeys = await SecureStore.getAllKeysAsync?.() || [];
-      const pinKeys = allKeys.filter(key => 
-        key.includes('user_pin_hash_') || 
-        key.includes('user_pin_salt_') || 
-        key.includes('pin_setup_complete_') ||
-        key.includes('pin_failed_attempts_') ||
-        key.includes('pin_lockout_time_')
-      );
-
-      for (const key of pinKeys) {
-        await SecureStore.deleteItemAsync(key);
+      if (userId) {
+        // Reset for specific user
+        const pinKey = this.getUserSpecificKey(this.PIN_KEY_BASE, userId);
+        const saltKey = this.getUserSpecificKey(this.PIN_SALT_KEY_BASE, userId);
+        const setupKey = this.getUserSpecificKey(this.PIN_SETUP_KEY_BASE, userId);
+        
+        await SecureStore.deleteItemAsync(pinKey);
+        await SecureStore.deleteItemAsync(saltKey);
+        await SecureStore.deleteItemAsync(setupKey);
+        await this.resetFailedAttempts(userId);
+      } else {
+        // DANGEROUS: Reset for all users (development only)
+        // This is not practical in production as we don't know all user IDs
+        console.warn('⚠️ Emergency reset without user ID - limited functionality');
+        
+        // Try to clear common patterns (this won't get everything)
+        const commonKeys = [
+          'user_pin_hash', 'user_pin_salt', 'pin_setup_complete',
+          'pin_failed_attempts', 'pin_lockout_time'
+        ];
+        
+        for (const key of commonKeys) {
+          try {
+            await SecureStore.deleteItemAsync(key);
+          } catch (e) {
+            // Key might not exist, ignore
+          }
+        }
       }
-
-      console.log('🗑️ Removed', pinKeys.length, 'PIN-related keys');
+      
       return { success: true };
     } catch (error) {
       console.error('Emergency reset error:', error);
@@ -438,7 +423,7 @@ class SecurityService {
     }
   }
 
-  // Generate secure session token
+  // Generate secure session token (unchanged)
   async generateSessionToken() {
     try {
       const timestamp = Date.now().toString();
@@ -458,47 +443,24 @@ class SecurityService {
     }
   }
 
-  // Check if app requires PIN authentication for specific user
-  async requiresPinAuth(userId = null) {
-    try {
-      const id = userId || this.currentUserId;
-      const isSetup = await this.isPinSetup(id);
-      const lockoutCheck = await this.checkLockout(id);
-      
-      return {
-        required: isSetup,
-        lockedOut: !lockoutCheck.allowed,
-        remainingLockoutTime: lockoutCheck.remainingTime || 0
-      };
-    } catch (error) {
-      console.error('Requires PIN auth error:', error);
+  // Check if app requires PIN authentication for specific user - FIXED VERSION
+  async requiresPinAuth(userId) {
+    if (!userId) {
       return {
         required: false,
         lockedOut: false,
         remainingLockoutTime: 0
       };
     }
-  }
 
-  // Debug: List all stored PIN keys (development only)
-  async debugListAllPinKeys() {
-    if (!__DEV__) return;
+    const isSetup = await this.isPinSetup(userId);
+    const lockoutCheck = await this.checkLockout(userId);
     
-    try {
-      const allKeys = await SecureStore.getAllKeysAsync?.() || [];
-      const pinKeys = allKeys.filter(key => 
-        key.includes('user_pin_') || key.includes('pin_')
-      );
-      
-      console.log('🔍 All PIN keys in SecureStore:', pinKeys);
-      
-      for (const key of pinKeys) {
-        const value = await SecureStore.getItemAsync(key);
-        console.log(`🔑 ${key}: ${value ? 'EXISTS' : 'NULL'}`);
-      }
-    } catch (error) {
-      console.error('Debug list keys error:', error);
-    }
+    return {
+      required: isSetup,
+      lockedOut: !lockoutCheck.allowed,
+      remainingLockoutTime: lockoutCheck.remainingTime || 0
+    };
   }
 }
 
