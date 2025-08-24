@@ -1,6 +1,7 @@
-// src/utils/translations.js - Updated with all requested changes
+// src/utils/translations.js - Updated with security and new features
 export const translations = {
   en: {
+    // Existing translations
     welcome: 'Welcome to Akchabar!',
     subtitle: 'Akchabar - smart finance tracker for Kyrgyzstan.\nYour money, your future, your control.',
     signUpPhone: 'Sign up with phone number',
@@ -54,8 +55,101 @@ export const translations = {
     selectFile: 'Select File',
     fileSelected: 'File selected',
     agreeToTerms: 'By creating an account, you agree to our Terms of Service and Privacy Policy',
+    
+    // NEW: Security & PIN translations
+    securitySetup: 'Security Setup',
+    setupPin: 'Set up your PIN',
+    setupPinSubtitle: 'Create a 6-digit PIN to secure your account',
+    confirmPin: 'Confirm your PIN',
+    confirmPinSubtitle: 'Enter your PIN again to confirm',
+    enterPin: 'Enter Your PIN',
+    enterPinSubtitle: 'Enter your 6-digit PIN to continue',
+    pinMismatch: 'PINs do not match',
+    pinTooShort: 'PIN must be 6 digits',
+    pinTooWeak: 'Please choose a more secure PIN',
+    setupComplete: 'Security Setup Complete',
+    pinCreated: 'PIN created successfully!',
+    incorrectPin: 'Incorrect PIN',
+    attemptsRemaining: 'attempts remaining',
+    accountLocked: 'Account Locked',
+    tryAgainIn: 'Try again in',
+    minutes: 'minutes',
+    forgotPin: 'Forgot PIN?',
+    resetPin: 'Reset PIN',
+    selectResetMethod: 'How would you like to reset your PIN?',
+    viaSMS: 'Via SMS',
+    viaEmail: 'Via Email',
+    sendCode: 'Send Code',
+    enterCode: 'Enter Code',
+    codeSubtitle: 'Enter the 6-digit code we sent to',
+    createNewPin: 'Create New PIN',
+    confirmNewPin: 'Confirm New PIN',
+    resetComplete: 'PIN Reset Complete',
+    codeSent: 'Code sent!',
+    skip: 'Skip for now',
+    enable: 'Enable',
+    delete: 'Delete',
+    cancel: 'Cancel',
+    back: 'Back',
+    
+    // NEW: Biometric authentication
+    enableBiometric: 'Enable Biometric',
+    biometricSubtitle: 'Use biometric authentication for quick access',
+    useBiometric: 'Use Biometric',
+    biometricSetupTitle: 'Enable Biometric Login',
+    biometricSetupSubtitle: 'Use your fingerprint or face to sign in quickly and securely',
+    biometricSuccess: 'Biometric authentication enabled!',
+    biometricFailed: 'Biometric authentication failed',
+    biometricNotAvailable: 'Biometric authentication not available',
+    biometricNotEnrolled: 'Please set up biometric authentication in your device settings first',
+    
+    // NEW: Finance features
+    dashboard: 'Dashboard',
+    transactions: 'Transactions',
+    budgets: 'Budgets',
+    goals: 'Goals',
+    analytics: 'Analytics',
+    accounts: 'Accounts',
+    addTransaction: 'Add Transaction',
+    addAccount: 'Add Account',
+    addBudget: 'Add Budget',
+    addGoal: 'Add Goal',
+    income: 'Income',
+    expense: 'Expense',
+    amount: 'Amount',
+    description: 'Description',
+    category: 'Category',
+    date: 'Date',
+    save: 'Save',
+    edit: 'Edit',
+    
+    // NEW: Plan features
+    unlimited: 'Unlimited',
+    basicPlan: 'Basic Plan',
+    plusPlan: 'Plus Plan',
+    proPlan: 'Pro Plan',
+    upgrade: 'Upgrade',
+    upgradeRequired: 'Upgrade Required',
+    upgradeMessage: 'This feature requires a higher plan',
+    
+    // NEW: Settings
+    settings: 'Settings',
+    profile: 'Profile',
+    security: 'Security',
+    notifications: 'Notifications',
+    about: 'About',
+    helpSupport: 'Help & Support',
+    signOut: 'Sign Out',
+    
+    // NEW: Error messages
+    connectionError: 'Connection error. Please check your internet.',
+    serverError: 'Server error. Please try again later.',
+    unknownError: 'Something went wrong. Please try again.',
+    validationError: 'Please check your input and try again.',
   },
+  
   ru: {
+    // Existing translations
     welcome: 'Добро пожаловать в Акчабар!',
     subtitle: 'Акчабар - умный трекер финансов для Кыргызстана.\nВаши деньги, ваше будущее, ваш контроль.',
     signUpPhone: 'Зарегистрироваться по номеру телефона',
@@ -109,8 +203,101 @@ export const translations = {
     selectFile: 'Выбрать файл',
     fileSelected: 'Файл выбран',
     agreeToTerms: 'Создавая аккаунт, вы соглашаетесь с нашими Условиями использования и Политикой конфиденциальности',
+    
+    // NEW: Security & PIN translations
+    securitySetup: 'Настройка безопасности',
+    setupPin: 'Установить PIN-код',
+    setupPinSubtitle: 'Создайте 6-значный PIN для защиты аккаунта',
+    confirmPin: 'Подтвердите PIN-код',
+    confirmPinSubtitle: 'Введите PIN еще раз для подтверждения',
+    enterPin: 'Введите PIN-код',
+    enterPinSubtitle: 'Введите 6-значный PIN для продолжения',
+    pinMismatch: 'PIN-коды не совпадают',
+    pinTooShort: 'PIN должен содержать 6 цифр',
+    pinTooWeak: 'Пожалуйста, выберите более безопасный PIN',
+    setupComplete: 'Настройка безопасности завершена',
+    pinCreated: 'PIN успешно создан!',
+    incorrectPin: 'Неверный PIN-код',
+    attemptsRemaining: 'попыток осталось',
+    accountLocked: 'Аккаунт заблокирован',
+    tryAgainIn: 'Попробуйте через',
+    minutes: 'минут',
+    forgotPin: 'Забыли PIN?',
+    resetPin: 'Сбросить PIN',
+    selectResetMethod: 'Как вы хотите сбросить PIN?',
+    viaSMS: 'По SMS',
+    viaEmail: 'По Email',
+    sendCode: 'Отправить код',
+    enterCode: 'Введите код',
+    codeSubtitle: 'Введите 6-значный код, отправленный на',
+    createNewPin: 'Создать новый PIN',
+    confirmNewPin: 'Подтвердите новый PIN',
+    resetComplete: 'PIN успешно сброшен',
+    codeSent: 'Код отправлен!',
+    skip: 'Пропустить',
+    enable: 'Включить',
+    delete: 'Удалить',
+    cancel: 'Отмена',
+    back: 'Назад',
+    
+    // NEW: Biometric authentication
+    enableBiometric: 'Включить биометрию',
+    biometricSubtitle: 'Используйте биометрическую аутентификацию для быстрого доступа',
+    useBiometric: 'Использовать биометрию',
+    biometricSetupTitle: 'Включить биометрический вход',
+    biometricSetupSubtitle: 'Используйте отпечаток пальца или лицо для быстрого и безопасного входа',
+    biometricSuccess: 'Биометрическая аутентификация включена!',
+    biometricFailed: 'Биометрическая аутентификация не удалась',
+    biometricNotAvailable: 'Биометрическая аутентификация недоступна',
+    biometricNotEnrolled: 'Сначала настройте биометрическую аутентификацию в настройках устройства',
+    
+    // NEW: Finance features
+    dashboard: 'Панель управления',
+    transactions: 'Транзакции',
+    budgets: 'Бюджеты',
+    goals: 'Цели',
+    analytics: 'Аналитика',
+    accounts: 'Счета',
+    addTransaction: 'Добавить транзакцию',
+    addAccount: 'Добавить счет',
+    addBudget: 'Добавить бюджет',
+    addGoal: 'Добавить цель',
+    income: 'Доход',
+    expense: 'Расход',
+    amount: 'Сумма',
+    description: 'Описание',
+    category: 'Категория',
+    date: 'Дата',
+    save: 'Сохранить',
+    edit: 'Редактировать',
+    
+    // NEW: Plan features
+    unlimited: 'Неограниченно',
+    basicPlan: 'Базовый план',
+    plusPlan: 'План Плюс',
+    proPlan: 'План Про',
+    upgrade: 'Обновить',
+    upgradeRequired: 'Требуется обновление',
+    upgradeMessage: 'Эта функция требует план выше',
+    
+    // NEW: Settings
+    settings: 'Настройки',
+    profile: 'Профиль',
+    security: 'Безопасность',
+    notifications: 'Уведомления',
+    about: 'О приложении',
+    helpSupport: 'Помощь и поддержка',
+    signOut: 'Выйти',
+    
+    // NEW: Error messages
+    connectionError: 'Ошибка соединения. Проверьте интернет.',
+    serverError: 'Ошибка сервера. Попробуйте позже.',
+    unknownError: 'Что-то пошло не так. Попробуйте еще раз.',
+    validationError: 'Проверьте ввод и попробуйте еще раз.',
   },
+  
   ky: {
+    // Existing translations
     welcome: 'Акчабарга кош келиңиз!',
     subtitle: 'Акчабар - Кыргызстан үчүн акылдуу каржы трекери.\nСиздин акчаңыз, келечегиңиз, көзөмөлүңүз.',
     signUpPhone: 'Телефон номери менен каттылуу',
@@ -164,15 +351,104 @@ export const translations = {
     selectFile: 'Файл тандоо',
     fileSelected: 'Файл тандалды',
     agreeToTerms: 'Аккаунт түзүп, биздин Колдонуу шарттары жана Купуялык саясаты менен макулсуз',
+    
+    // NEW: Security & PIN translations
+    securitySetup: 'Коопсуздук жөндөөсү',
+    setupPin: 'PIN код коюу',
+    setupPinSubtitle: 'Аккаунтуңузду коргоо үчүн 6 сандуу PIN түзүңүз',
+    confirmPin: 'PIN кодуңузду ырастаңыз',
+    confirmPinSubtitle: 'Ырастоо үчүн PIN кодуңузду кайра киргизиңиз',
+    enterPin: 'PIN кодуңузду киргизиңиз',
+    enterPinSubtitle: 'Улантуу үчүн 6 сандуу PIN киргизиңиз',
+    pinMismatch: 'PIN коддор дал келген жок',
+    pinTooShort: 'PIN 6 сандан турушу керек',
+    pinTooWeak: 'Коопсуз PIN тандаңыз',
+    setupComplete: 'Коопсуздук жөндөөсү аяктады',
+    pinCreated: 'PIN ийгиликтүү түзүлдү!',
+    incorrectPin: 'Туура эмес PIN код',
+    attemptsRemaining: 'аракет калды',
+    accountLocked: 'Аккаунт бөгөттөлдү',
+    tryAgainIn: 'Кайра аракет кылыңыз',
+    minutes: 'мүнөт',
+    forgotPin: 'PIN унуттуңузбу?',
+    resetPin: 'PIN калыбына келтирүү',
+    selectResetMethod: 'PIN кодду кантип калыбына келтиргиңиз келет?',
+    viaSMS: 'SMS аркылуу',
+    viaEmail: 'Email аркылуу',
+    sendCode: 'Код жөнөтүү',
+    enterCode: 'Кодду киргизиңиз',
+    codeSubtitle: '6 сандуу кодду киргизиңиз',
+    createNewPin: 'Жаңы PIN түзүү',
+    confirmNewPin: 'Жаңы PIN ырастоо',
+    resetComplete: 'PIN ийгиликтүү калыбына келтирилди',
+    codeSent: 'Код жөнөтүлдү!',
+    skip: 'Өткөрүп жиберүү',
+    enable: 'Иштетүү',
+    delete: 'Өчүрүү',
+    cancel: 'Жокко чыгаруу',
+    back: 'Артка',
+    
+    // NEW: Biometric authentication
+    enableBiometric: 'Биометрик аутентификацияны иштетүү',
+    biometricSubtitle: 'Тез кирүү үчүн биометрик аутентификацияны колдонуңуз',
+    useBiometric: 'Биометрик колдонуу',
+    biometricSetupTitle: 'Биометрик кирүүнү иштетүү',
+    biometricSetupSubtitle: 'Тез жана коопсуз кирүү үчүн манжа изи же бетиңизди колдонуңуз',
+    biometricSuccess: 'Биометрик аутентификация иштетилди!',
+    biometricFailed: 'Биометрик аутентификация ийгиликсиз',
+    biometricNotAvailable: 'Биометрик аутентификация жеткиликтүү эмес',
+    biometricNotEnrolled: 'Адегенде түзмөгүңүздүн жөндөөлөрүндө биометрик аутентификацияны коюңуз',
+    
+    // NEW: Finance features
+    dashboard: 'Башкы панель',
+    transactions: 'Транзакциялар',
+    budgets: 'Бюджеттер',
+    goals: 'Максаттар',
+    analytics: 'Аналитика',
+    accounts: 'Эсептер',
+    addTransaction: 'Транзакция кошуу',
+    addAccount: 'Эсеп кошуу',
+    addBudget: 'Бюджет кошуу',
+    addGoal: 'Максат кошуу',
+    income: 'Киреше',
+    expense: 'Чыгым',
+    amount: 'Сумма',
+    description: 'Сүрөттөмө',
+    category: 'Категория',
+    date: 'Күнү',
+    save: 'Сактоо',
+    edit: 'Өзгөртүү',
+    
+    // NEW: Plan features
+    unlimited: 'Чексиз',
+    basicPlan: 'Негизги план',
+    plusPlan: 'Плюс план',
+    proPlan: 'Про план',
+    upgrade: 'Жаңыртуу',
+    upgradeRequired: 'Жаңыртуу талап кылынат',
+    upgradeMessage: 'Бул функция жогорку планды талап кылат',
+    
+    // NEW: Settings
+    settings: 'Жөндөөлөр',
+    profile: 'Профиль',
+    security: 'Коопсуздук',
+    notifications: 'Эскертүүлөр',
+    about: 'Тиркеме жөнүндө',
+    helpSupport: 'Жардам жана колдоо',
+    signOut: 'Чыгуу',
+    
+    // NEW: Error messages
+    connectionError: 'Байланыш катасы. Интернетти текшериңиз.',
+    serverError: 'Сервер катасы. Кийинчерээк аракет кылыңыз.',
+    unknownError: 'Бир нерсе туура эмес болду. Кайра аракет кылыңыз.',
+    validationError: 'Киргизилген маалыматты текшерип, кайра аракет кылыңыз.',
   }
 };
 
-// UPDATED: Country codes with Uzbekistan and SMS login support
-// src/utils/translations.js - Lines 85-95 (countryCodes section)
-
+// UPDATED: Country codes with Uzbekistan and additional support
 export const countryCodes = [
   { code: '+996', flag: '🇰🇬', country: 'Kyrgyzstan' },
-  { code: '+998', flag: '🇺🇿', country: 'Uzbekistan' }, // Added Uzbekistan
+  { code: '+998', flag: '🇺🇿', country: 'Uzbekistan' },
   { code: '+1', flag: '🇺🇸', country: 'USA' },
   { code: '+44', flag: '🇬🇧', country: 'UK' },
   { code: '+7', flag: '🇷🇺', country: 'Russia' },
@@ -180,7 +456,211 @@ export const countryCodes = [
   { code: '+992', flag: '🇹🇯', country: 'Tajikistan' }
 ];
 
-// UPDATED: Plan information with more details and GBP pricing
+// NEW: Security settings translations
+export const securityTranslations = {
+  en: {
+    securitySettings: 'Security Settings',
+    pinCode: 'PIN Code',
+    pinCodeDesc: 'Secure your app with a 6-digit PIN',
+    pinStatus: 'PIN Status',
+    pinEnabled: 'Enabled',
+    pinDisabled: 'Disabled',
+    setupPinCode: 'Set up PIN Code',
+    changePinCode: 'Change PIN Code',
+    removePinCode: 'Remove PIN Code',
+    biometricAuth: 'Biometric Authentication',
+    biometricDesc: 'Use biometric authentication for quick access',
+    biometricEnabled: 'Enabled',
+    biometricDisabled: 'Disabled',
+    enableBiometric: 'Enable Biometric',
+    disableBiometric: 'Disable Biometric',
+    securityScore: 'Security Score',
+    securityStatus: 'Security Status',
+    excellent: 'Excellent',
+    good: 'Good',
+    fair: 'Fair',
+    poor: 'Poor',
+    failedAttempts: 'Failed Attempts',
+    lastAttempt: 'Last Attempt',
+    lockoutStatus: 'Lockout Status',
+    notLockedOut: 'Not Locked Out',
+    lockedOut: 'Locked Out',
+    emergencyReset: 'Emergency Reset',
+    resetAllSecurity: 'Reset All Security Settings',
+    confirmReset: 'Are you sure you want to reset all security settings?',
+    securityTips: 'Security Tips',
+    tip1: 'Use a unique PIN that others cannot easily guess',
+    tip2: 'Enable biometric authentication for convenience',
+    tip3: 'Never share your PIN with anyone',
+    tip4: 'Change your PIN regularly for better security',
+  },
+  ru: {
+    securitySettings: 'Настройки безопасности',
+    pinCode: 'PIN-код',
+    pinCodeDesc: 'Защитите приложение 6-значным PIN-кодом',
+    pinStatus: 'Статус PIN',
+    pinEnabled: 'Включен',
+    pinDisabled: 'Отключен',
+    setupPinCode: 'Установить PIN-код',
+    changePinCode: 'Изменить PIN-код',
+    removePinCode: 'Удалить PIN-код',
+    biometricAuth: 'Биометрическая аутентификация',
+    biometricDesc: 'Используйте биометрическую аутентификацию для быстрого доступа',
+    biometricEnabled: 'Включена',
+    biometricDisabled: 'Отключена',
+    enableBiometric: 'Включить биометрию',
+    disableBiometric: 'Отключить биометрию',
+    securityScore: 'Оценка безопасности',
+    securityStatus: 'Статус безопасности',
+    excellent: 'Отлично',
+    good: 'Хорошо',
+    fair: 'Удовлетворительно',
+    poor: 'Плохо',
+    failedAttempts: 'Неудачные попытки',
+    lastAttempt: 'Последняя попытка',
+    lockoutStatus: 'Статус блокировки',
+    notLockedOut: 'Не заблокирован',
+    lockedOut: 'Заблокирован',
+    emergencyReset: 'Экстренный сброс',
+    resetAllSecurity: 'Сбросить все настройки безопасности',
+    confirmReset: 'Вы уверены, что хотите сбросить все настройки безопасности?',
+    securityTips: 'Советы по безопасности',
+    tip1: 'Используйте уникальный PIN, который другие не смогут легко угадать',
+    tip2: 'Включите биометрическую аутентификацию для удобства',
+    tip3: 'Никогда не сообщайте свой PIN никому',
+    tip4: 'Регулярно меняйте PIN для лучшей безопасности',
+  },
+  ky: {
+    securitySettings: 'Коопсуздук жөндөөлөрү',
+    pinCode: 'PIN код',
+    pinCodeDesc: 'Тиркемеңизди 6 сандуу PIN код менен коргоңуз',
+    pinStatus: 'PIN абалы',
+    pinEnabled: 'Иштетилген',
+    pinDisabled: 'Өчүрүлгөн',
+    setupPinCode: 'PIN код коюу',
+    changePinCode: 'PIN кодду өзгөртүү',
+    removePinCode: 'PIN кодду алып салуу',
+    biometricAuth: 'Биометрикалык аутентификация',
+    biometricDesc: 'Тез кирүү үчүн биометрикалык аутентификацияны колдонуңуз',
+    biometricEnabled: 'Иштетилген',
+    biometricDisabled: 'Өчүрүлгөн',
+    enableBiometric: 'Биометрикалык аутентификацияны иштетүү',
+    disableBiometric: 'Биометрикалык аутентификацияны өчүрүү',
+    securityScore: 'Коопсуздук баасы',
+    securityStatus: 'Коопсуздук абалы',
+    excellent: 'Мыкты',
+    good: 'Жакшы',
+    fair: 'Канааттандырарлык',
+    poor: 'Начар',
+    failedAttempts: 'Ийгиликсиз аракеттер',
+    lastAttempt: 'Акыркы аракет',
+    lockoutStatus: 'Бөгөттөө абалы',
+    notLockedOut: 'Бөгөттөлгөн жок',
+    lockedOut: 'Бөгөттөлгөн',
+    emergencyReset: 'Шашылыш калыбына келтирүү',
+    resetAllSecurity: 'Бардык коопсуздук жөндөөлөрүн калыбына келтирүү',
+    confirmReset: 'Бардык коопсуздук жөндөөлөрүн калыбына келтиргиңиз келеби?',
+    securityTips: 'Коопсуздук кеңештери',
+    tip1: 'Башкалар оңой таба албаган уникалдуу PIN колдонуңуз',
+    tip2: 'Ыңгайлуулук үчүн биометрикалык аутентификацияны иштетиңиз',
+    tip3: 'PIN кодуңузду эч кимге айтпаңыз',
+    tip4: 'Жакшыраак коопсуздук үчүн PIN кодуңузду үзөк-үзөк өзгөртүп турурңуз',
+  }
+};
+
+// NEW: Biometric authentication types
+export const biometricTypes = {
+  fingerprint: {
+    en: 'Fingerprint',
+    ru: 'Отпечаток пальца',
+    ky: 'Манжа изи'
+  },
+  face: {
+    en: 'Face ID',
+    ru: 'Face ID',
+    ky: 'Бет ID'
+  },
+  iris: {
+    en: 'Iris',
+    ru: 'Радужка',
+    ky: 'Көз карачы'
+  },
+  voice: {
+    en: 'Voice',
+    ru: 'Голос',
+    ky: 'Үн'
+  }
+};
+
+// NEW: PIN strength indicators
+export const pinStrengthMessages = {
+  en: {
+    weak: 'Weak - avoid common patterns',
+    fair: 'Fair - could be stronger',
+    good: 'Good - secure PIN',
+    excellent: 'Excellent - very secure'
+  },
+  ru: {
+    weak: 'Слабый - избегайте простых комбинаций',
+    fair: 'Удовлетворительный - можно сделать надежнее',
+    good: 'Хороший - безопасный PIN',
+    excellent: 'Отличный - очень безопасный'
+  },
+  ky: {
+    weak: 'Алсыз - жөнөкөй комбинацияларды колдонбоңуз',
+    fair: 'Канааттандырарлык - мындан бекем кылса болот',
+    good: 'Жакшы - коопсуз PIN',
+    excellent: 'Мыкты - абдан коопсуз'
+  }
+};
+
+// Additional income types for financial setup
+export const additionalIncomeTypes = {
+  en: [
+    'Freelance Work',
+    'Side Business', 
+    'Investment Returns',
+    'Rental Income',
+    'Part-time Job',
+    'Consulting',
+    'Online Sales',
+    'Cryptocurrency',
+    'Dividends',
+    'Royalties',
+    'Pension',
+    'Other'
+  ],
+  ru: [
+    'Фриланс',
+    'Побочный бизнес',
+    'Доходы от инвестиций', 
+    'Доходы от аренды',
+    'Подработка',
+    'Консалтинг',
+    'Онлайн продажи',
+    'Криптовалюта',
+    'Дивиденды',
+    'Роялти',
+    'Пенсия',
+    'Другое'
+  ],
+  ky: [
+    'Фриланс иш',
+    'Кошумча бизнес',
+    'Инвестициядан киреше',
+    'Ижарага берүүдөн киреше',
+    'Жарым күндүк иш',
+    'Консультация',
+    'Онлайн сатуу',
+    'Криптовалюта',
+    'Дивиденддер',
+    'Роялти',
+    'Пенсия',
+    'Башка'
+  ]
+};
+
+// Enhanced plan details with security features
 export const planDetails = {
   basic: {
     name: 'Basic',
@@ -202,9 +682,11 @@ export const planDetails = {
         '5 spending categories', 
         '2 budgets & 2 savings goals',
         'Basic charts and reports',
+        'PIN security protection',
         'Monthly spending insights',
         'Expense categorization',
-        'Balance tracking'
+        'Balance tracking',
+        'Email support'
       ],
       ru: [
         '150 транзакций в месяц',
@@ -212,9 +694,11 @@ export const planDetails = {
         '5 категорий трат',
         '2 бюджета и 2 цели накоплений',
         'Базовые графики и отчеты',
+        'Защита PIN-кодом',
         'Ежемесячная аналитика трат',
         'Категоризация расходов',
-        'Отслеживание баланса'
+        'Отслеживание баланса',
+        'Поддержка по email'
       ],
       ky: [
         'Айына 150 транзакция',
@@ -222,17 +706,11 @@ export const planDetails = {
         '5 чыгым категориясы',
         '2 бюджет жана 2 топтоо максаты',
         'Негизги графиктер жана отчеттор',
+        'PIN код коргоосу',
         'Айлык чыгым анализи',
         'Чыгымдарды категорияларга бөлүү',
-        'Балансты көзөмөлдөө'
-      ]
-    },
-    limitations: {
-      en: [
-        'Limited to 150 transactions monthly',
-        'Basic customer support',
-        'No data export functionality',
-        'No AI-powered insights'
+        'Балансты көзөмөлдөө',
+        'Email аркылуу колдоо'
       ]
     }
   },
@@ -257,6 +735,7 @@ export const planDetails = {
         'Unlimited budgets & goals',
         'AI-powered spending analysis',
         'Advanced charts & analytics',
+        'PIN + Biometric security',
         'Data export (CSV, PDF)',
         'Bill reminders & notifications',
         'Receipt scanning (mobile)',
@@ -273,6 +752,7 @@ export const planDetails = {
         'Неограниченные бюджеты и цели',
         'AI-анализ трат',
         'Продвинутые графики и аналитика',
+        'PIN + биометрическая защита',
         'Экспорт данных (CSV, PDF)',
         'Напоминания о счетах',
         'Сканирование чеков',
@@ -289,6 +769,7 @@ export const planDetails = {
         'Чексиз бюджеттер жана максаттар',
         'AI чыгым анализи',
         'Өркүндөтүлгөн графиктер',
+        'PIN + биометрикалык коргоо',
         'Маалымат экспорту (CSV, PDF)',
         'Эсептер жөнүндө эскертүүлөр',
         'Чек сканерлөө',
@@ -319,12 +800,13 @@ export const planDetails = {
         '5 financial accounts',
         'Family sharing (up to 5 members)',
         'Advanced AI financial advisor',
+        'Enhanced security features',
         'Tax category tracking',
         'Business expense management', 
         'Automated scheduled reports',
         'Priority phone & chat support',
         '24/7 customer assistance',
-        'Advanced security features',
+        'Advanced security dashboard',
         'Custom data integrations',
         'Personal finance coaching',
         'Investment analysis tools',
@@ -335,12 +817,13 @@ export const planDetails = {
         '5 финансовых счетов',
         'Семейный доступ (до 5 человек)',
         'Продвинутый AI финансовый советник',
+        'Расширенные функции безопасности',
         'Отслеживание налоговых категорий',
         'Управление бизнес-расходами',
         'Автоматизированные отчеты',
         'Приоритетная поддержка 24/7',
         'Круглосуточная помощь',
-        'Расширенные функции безопасности',
+        'Расширенная панель безопасности',
         'Пользовательские интеграции',
         'Персональный финансовый коучинг',
         'Инструменты анализа инвестиций',
@@ -351,169 +834,18 @@ export const planDetails = {
         '5 каржылык эсеп',
         'Үй-бүлөлүк кирүү (5 мүчөгө чейин)',
         'Өркүндөтүлгөн AI каржы кеңешчиси',
+        'Кеңейтилген коопсуздук функциялары',
         'Салык категорияларын көзөмөлдөө',
         'Бизнес чыгымдарын башкаруу',
         'Автоматтык отчеттор',
         'Биринчи кезектеги 24/7 колдоо',
         'Төгүрөк саат жардам',
-        'Коопсуздуктун кеңейтилген функциялары',
+        'Кеңейтилген коопсуздук панели',
         'Жеке интеграциялар',
         'Жеке каржы үйрөтүү',
         'Инвестиция анализ куралдары',
         'Реалдуу убакытта эскертүүлөр'
       ]
     }
-  }
-};
-
-// Currency conversion rates (approximate)
-export const currencyRates = {
-  KGS: 1,
-  GBP: 0.011,
-  USD: 0.011,
-  EUR: 0.010,
-  RUB: 1.1
-};
-
-// Plan comparison data for Emma-style tabs
-export const planComparison = {
-  features: [
-    {
-      name: { en: 'Monthly Transactions', ru: 'Транзакций в месяц', ky: 'Айлык транзакциялар' },
-      basic: '150',
-      plus: 'Unlimited',
-      pro: 'Unlimited'
-    },
-    {
-      name: { en: 'Financial Accounts', ru: 'Финансовых счетов', ky: 'Каржылык эсептер' },
-      basic: '2',
-      plus: '3',
-      pro: '5'
-    },
-    {
-      name: { en: 'Spending Categories', ru: 'Категорий трат', ky: 'Чыгым категориялары' },
-      basic: '5',
-      plus: 'Unlimited',
-      pro: 'Unlimited'
-    },
-    {
-      name: { en: 'Budgets & Goals', ru: 'Бюджеты и цели', ky: 'Бюджеттер жана максаттар' },
-      basic: '2 each',
-      plus: 'Unlimited',
-      pro: 'Unlimited'
-    },
-    {
-      name: { en: 'AI Insights', ru: 'AI аналитика', ky: 'AI анализ' },
-      basic: '❌',
-      plus: '✅',
-      pro: '✅ Advanced'
-    },
-    {
-      name: { en: 'Data Export', ru: 'Экспорт данных', ky: 'Маалымат экспорту' },
-      basic: '❌',
-      plus: '✅',
-      pro: '✅'
-    },
-    {
-      name: { en: 'Bank Sync', ru: 'Синхронизация с банком', ky: 'Банк менен синхрондоо' },
-      basic: '❌',
-      plus: '✅',
-      pro: '✅'
-    },
-    {
-      name: { en: 'Family Sharing', ru: 'Семейный доступ', ky: 'Үй-бүлөлүк кирүү' },
-      basic: '❌',
-      plus: '❌',
-      pro: '✅ (5 members)'
-    },
-    {
-      name: { en: 'Priority Support', ru: 'Приоритетная поддержка', ky: 'Биринчи кезектеги колдоо' },
-      basic: '❌',
-      plus: 'Email',
-      pro: '24/7 Phone & Chat'
-    },
-    {
-      name: { en: 'Investment Tracking', ru: 'Отслеживание инвестиций', ky: 'Инвестиция көзөмөлү' },
-      basic: '❌',
-      plus: 'Basic',
-      pro: 'Advanced'
-    }
-  ]
-};
-
-// Financial setup options for additional income sources
-export const additionalIncomeTypes = {
-  en: [
-    'Freelance Work',
-    'Side Business', 
-    'Investment Returns',
-    'Rental Income',
-    'Part-time Job',
-    'Consulting',
-    'Online Sales',
-    'Cryptocurrency',
-    'Dividends',
-    'Other'
-  ],
-  ru: [
-    'Фриланс',
-    'Побочный бизнес',
-    'Доходы от инвестиций', 
-    'Доходы от аренды',
-    'Подработка',
-    'Консалтинг',
-    'Онлайн продажи',
-    'Криптовалюта',
-    'Дивиденды',
-    'Другое'
-  ],
-  ky: [
-    'Фриланс иш',
-    'Кошумча бизнес',
-    'Инвестициядан киреше',
-    'Ижарага берүүдөн киреше',
-    'Жарым күндүк иш',
-    'Консультация',
-    'Онлайн сатуу',
-    'Криптовалюта',
-    'Дивиденддер',
-    'Башка'
-  ]
-};
-
-// File upload support types for statements
-export const supportedFileTypes = [
-  'application/pdf',
-  'image/jpeg',
-  'image/png', 
-  'text/csv',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-];
-
-export const fileTypeLabels = {
-  en: {
-    'application/pdf': 'PDF Documents',
-    'image/jpeg': 'JPEG Images',
-    'image/png': 'PNG Images',
-    'text/csv': 'CSV Files',
-    'application/vnd.ms-excel': 'Excel Files',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel Files'
-  },
-  ru: {
-    'application/pdf': 'PDF документы',
-    'image/jpeg': 'JPEG изображения',
-    'image/png': 'PNG изображения', 
-    'text/csv': 'CSV файлы',
-    'application/vnd.ms-excel': 'Excel файлы',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel файлы'
-  },
-  ky: {
-    'application/pdf': 'PDF документтер',
-    'image/jpeg': 'JPEG сүрөттөр',
-    'image/png': 'PNG сүрөттөр',
-    'text/csv': 'CSV файлдар',
-    'application/vnd.ms-excel': 'Excel файлдар',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel файлдар'
   }
 };
