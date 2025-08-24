@@ -313,6 +313,7 @@ const styles = {
     fontSize: width * 0.035,
     color: '#9ca3af', // FIXED: Better contrast for subtitle
     textAlign: 'center',
+    fontStyle: "italic",
     lineHeight: width * 0.045,
     paddingHorizontal: 20,
   },

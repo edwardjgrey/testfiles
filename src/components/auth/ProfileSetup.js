@@ -18,6 +18,8 @@ import { translations } from '../../utils/translations';
 import LanguageSelector from '../common/LanguageSelector';
 import KeyboardAwareWrapper from '../common/KeyboardAwareWrapper';
 
+
+
 const { width } = Dimensions.get('window');
 
 const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {

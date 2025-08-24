@@ -227,7 +227,7 @@ const OnboardingFlow = ({ language, setLanguage, onComplete }) => {
 const styles = {
   container: {
     flex: 1,
-    backgroundColor: '#f7f8fb',
+    backgroundColor: '',
   },
   header: {
     position: 'absolute',
@@ -248,7 +248,7 @@ const styles = {
   },
   skipText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: 'white',
     fontWeight: '600',
   },
   content: {
@@ -309,7 +309,7 @@ const styles = {
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#1f2937',
+    color: 'white',
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 40,

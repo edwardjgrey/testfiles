@@ -1,4 +1,4 @@
-// src/styles/globalStyles.js - FIXED with proper dark theme and StatusBar
+// src/styles/globalStyles.js - FIXED VERSION with proper positioning and white text
 import { StyleSheet, Dimensions, StatusBar, Platform } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -21,10 +21,10 @@ export const colors = {
   textDim: '#9ca3af',
   border: '#374151',
   
-  // FIXED: Auth colors properly configured for dark theme
+  // Auth colors properly configured for dark theme
   authBg: '#05212A',
   authCard: '#1f2937',
-  authText: '#ffffff', // FIXED: White text for dark theme
+  authText: '#ffffff',
   authTextDim: '#9ca3af',
   authStroke: '#374151',
   
@@ -38,11 +38,10 @@ export const colors = {
 };
 
 export const globalStyles = StyleSheet.create({
-  // FIXED: Auth Container with proper dark theme and no white lines
+  // FIXED: Auth Container with proper dark theme
   authContainer: {
     flex: 1,
-    backgroundColor: colors.authBg, // Dark background
-    // REMOVED: paddingTop that was causing white lines
+    backgroundColor: colors.authBg,
   },
   
   mainContainer: {
@@ -50,12 +49,14 @@ export const globalStyles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   
-  // FIXED: Proper scroll content without white space issues
+  // FIXED: Better scroll content positioning
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: responsiveWidth(5),
-    paddingTop: 20, // Reduced and simplified
-    paddingBottom: responsiveHeight(3),
+    paddingTop: Platform.OS === 'ios' ? 100 : 80, // Increased for better spacing
+    paddingBottom: responsiveHeight(5),
+    justifyContent: 'center', // Center content vertically
+    minHeight: height * 0.8, // Ensure scrollable area
   },
   
   mainContent: {
@@ -63,12 +64,12 @@ export const globalStyles = StyleSheet.create({
     paddingTop: responsiveHeight(3),
   },
   
-  // FIXED: Auth card with proper dark theme colors
+  // FIXED: Auth card with proper spacing
   authCard: {
-    backgroundColor: colors.authCard, // Dark card background
+    backgroundColor: colors.authCard,
     borderRadius: 20,
     padding: responsiveWidth(6),
-    marginVertical: 8,
+    marginVertical: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -89,7 +90,6 @@ export const globalStyles = StyleSheet.create({
     borderColor: colors.border,
   },
   
-  // Logo wrapper with proper theme
   logoWrap: {
     width: responsiveWidth(22),
     height: responsiveWidth(22),
@@ -106,7 +106,7 @@ export const globalStyles = StyleSheet.create({
     elevation: 6,
   },
   
-  // FIXED: Typography with proper white colors for dark theme
+  // FIXED: Typography with proper white colors
   authTitle: {
     fontSize: responsiveFontSize(26),
     fontWeight: '800',
@@ -159,7 +159,7 @@ export const globalStyles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   
-  // Button styles with proper dark theme
+  // Button styles
   pill: {
     height: responsiveHeight(7),
     borderRadius: responsiveHeight(3.5),
@@ -204,7 +204,7 @@ export const globalStyles = StyleSheet.create({
   },
   
   pillTextSecondary: {
-    color: colors.authText,
+    color: '#ffffff', // FIXED: White text
     fontSize: responsiveFontSize(16),
     fontWeight: '700',
     marginLeft: 8,
@@ -222,14 +222,15 @@ export const globalStyles = StyleSheet.create({
     fontWeight: '700',
   },
   
-  // FIXED: Back button with proper dark theme
+  // FIXED: Better positioned back button
   backButton: {
-    padding: 12,
-    marginBottom: 16,
-    marginTop: 8,
-    alignSelf: 'flex-start',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 20,
+    zIndex: 1000,
+    backgroundColor: 'rgba(152, 221, 166, 0.1)',
     borderRadius: 12,
-    backgroundColor: 'rgba(152, 221, 166, 0.1)', // Semi-transparent primary color
+    padding: 12,
     borderWidth: 1,
     borderColor: colors.border,
     minWidth: 44,
@@ -238,10 +239,10 @@ export const globalStyles = StyleSheet.create({
     alignItems: 'center',
   },
   
-  // Language Selector with proper positioning
+  // FIXED: Language Selector positioning
   languageContainer: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 30,
+    top: Platform.OS === 'ios' ? 60 : 40,
     right: 20,
     zIndex: 1000,
   },
@@ -259,7 +260,7 @@ export const globalStyles = StyleSheet.create({
   
   languageText: {
     fontSize: responsiveFontSize(14),
-    color: colors.authText,
+    color: '#ffffff', // FIXED: White text
   },
   
   modalOverlay: {
@@ -290,16 +291,16 @@ export const globalStyles = StyleSheet.create({
   
   languageOptionText: {
     fontSize: responsiveFontSize(14),
-    color: colors.authText,
+    color: '#ffffff', // FIXED: White text
   },
   
-  // FIXED: Form styles with dark theme
+  // FIXED: Form styles with white text
   formGroup: {
     marginBottom: 20,
   },
   
   formLabel: {
-    color: colors.authText, // FIXED: White labels
+    color: '#ffffff', // FIXED: White labels
     marginBottom: 8,
     fontSize: responsiveFontSize(14),
     fontWeight: '500',
@@ -312,7 +313,7 @@ export const globalStyles = StyleSheet.create({
     padding: 16,
     backgroundColor: colors.background,
     fontSize: responsiveFontSize(16),
-    color: colors.authText,
+    color: '#ffffff', // FIXED: White text input
     minHeight: responsiveHeight(6.5),
   },
   
@@ -326,7 +327,7 @@ export const globalStyles = StyleSheet.create({
     elevation: 3,
   },
   
-  // Phone input with dark theme
+  // Phone input styles
   phoneInputContainer: {
     flexDirection: 'row',
     borderWidth: 1,
@@ -353,7 +354,7 @@ export const globalStyles = StyleSheet.create({
   },
   
   countryCodeText: {
-    color: colors.authText,
+    color: '#ffffff', // FIXED: White text
     fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
@@ -361,12 +362,12 @@ export const globalStyles = StyleSheet.create({
   phoneInput: {
     flex: 1,
     fontSize: responsiveFontSize(18),
-    color: colors.authText,
+    color: '#ffffff', // FIXED: White text
     paddingHorizontal: 12,
     paddingVertical: 16,
   },
   
-  // Verification input with dark theme
+  // Verification input
   verificationInput: {
     height: responsiveHeight(7),
     borderWidth: 1,
@@ -377,7 +378,7 @@ export const globalStyles = StyleSheet.create({
     fontSize: responsiveFontSize(24),
     letterSpacing: 8,
     marginBottom: 20,
-    color: colors.authText,
+    color: '#ffffff', // FIXED: White text
   },
   
   resendSection: {
@@ -396,7 +397,7 @@ export const globalStyles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
   },
   
-  // Country modal with dark theme
+  // Country modal
   countryModal: {
     backgroundColor: colors.authCard,
     borderRadius: 12,
@@ -413,7 +414,7 @@ export const globalStyles = StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    color: colors.authText,
+    color: '#ffffff', // FIXED: White text
   },
   
   countryOption: {
@@ -424,10 +425,10 @@ export const globalStyles = StyleSheet.create({
   
   countryOptionText: {
     fontSize: responsiveFontSize(14),
-    color: colors.authText,
+    color: '#ffffff', // FIXED: White text
   },
   
-  // Profile picture with dark theme
+  // Profile picture section
   profilePicSection: {
     alignItems: 'center',
     marginBottom: 28,
@@ -470,7 +471,7 @@ export const globalStyles = StyleSheet.create({
     borderColor: colors.background,
   },
   
-  // Plan styles with dark theme
+  // FIXED: Plan styles with white text
   plansContainer: {
     marginBottom: 30,
     gap: 16,
@@ -526,14 +527,14 @@ export const globalStyles = StyleSheet.create({
   planName: {
     fontSize: responsiveFontSize(20),
     fontWeight: '800',
-    color: colors.authText, // FIXED: White text
+    color: '#ffffff', // FIXED: White text
     marginBottom: 10,
   },
   
   planPrice: {
     fontSize: responsiveFontSize(24),
     fontWeight: '900',
-    color: colors.authText, // FIXED: White text
+    color: '#ffffff', // FIXED: White text
     lineHeight: responsiveFontSize(28),
   },
   
@@ -558,13 +559,13 @@ export const globalStyles = StyleSheet.create({
   
   planFeatureText: {
     fontSize: responsiveFontSize(14),
-    color: colors.authText, // FIXED: White text
+    color: '#ffffff', // FIXED: White text
     flex: 1,
     lineHeight: responsiveFontSize(18),
     marginTop: -2,
   },
   
-  // Divider styles with dark theme colors
+  // Divider styles
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',

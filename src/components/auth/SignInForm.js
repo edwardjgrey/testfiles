@@ -1,4 +1,4 @@
-// src/components/auth/SignInForm.js - FIXED with consistent styling
+// src/components/auth/SignInForm.js - FIXED with country codes for SMS sign-in
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -12,10 +12,11 @@ import {
   Modal,
   ActivityIndicator,
   Linking,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { globalStyles } from '../../styles/globalStyles';
-import { translations } from '../../utils/translations';
+import { translations, countryCodes } from '../../utils/translations';
 import LanguageSelector from '../common/LanguageSelector';
 import KeyboardAwareWrapper from '../common/KeyboardAwareWrapper';
 import ApiService from '../../services/apiService';
@@ -28,6 +29,8 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
   const [signInMethod, setSignInMethod] = useState('email');
   const [email, setEmail] = useState(authData?.email || '');
   const [phone, setPhone] = useState(authData?.phone || '');
+  const [countryCode, setCountryCode] = useState(authData?.countryCode || '+996'); // Added country code state
+  const [showCountries, setShowCountries] = useState(false); // Added country modal state
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,6 +69,14 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
     }
   };
 
+  // Format phone number for display
+  const formatPhone = (text) => {
+    const digits = text.replace(/\D/g, '');
+    const match = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})$/);
+    if (!match) return digits;
+    return [match[1], match[2], match[3]].filter(Boolean).join(' ');
+  };
+
   const handleSignIn = async () => {
     try {
       setLoading(true);
@@ -102,10 +113,10 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
         if (handlePhoneSignIn) {
           await handlePhoneSignIn(cleanPhone);
         } else {
-          const result = await ApiService.requestPhoneSignIn(cleanPhone, '+996');
+          const result = await ApiService.requestPhoneSignIn(cleanPhone, countryCode);
           
           if (result.success) {
-            navigateAuth('verify', { phone: cleanPhone, isSignIn: true });
+            navigateAuth('verify', { phone: cleanPhone, countryCode, isSignIn: true });
           } else {
             Alert.alert('Error', result.error);
           }
@@ -264,6 +275,9 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
     );
   };
 
+  // Get selected country data
+  const selectedCountry = countryCodes.find(c => c.code === countryCode) || countryCodes[0];
+
   const renderResetModal = () => (
     <Modal
       visible={showResetModal}
@@ -276,9 +290,9 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
         
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
           <TouchableOpacity onPress={closeResetModal} style={{ marginRight: 15 }}>
-            <Ionicons name="close" size={24} color="#0f172a" />
+            <Ionicons name="close" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={[globalStyles.authTitleLeft, { flex: 1 }]}>
+          <Text style={[globalStyles.authTitleLeft, { flex: 1, color: '#ffffff' }]}>
             {language === 'ru' ? 'Сброс пароля' : 
              language === 'ky' ? 'Сыр сөздү калыбына келтирүү' : 
              'Reset Password'}
@@ -287,7 +301,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
 
         {resetStep === 1 && (
           <View>
-            <Text style={[globalStyles.authSubtitleLeft, { marginBottom: 20 }]}>
+            <Text style={[globalStyles.authSubtitleLeft, { marginBottom: 20, color: '#9ca3af' }]}>
               {language === 'ru' ? 'Введите ваш email для получения кода сброса' : 
                language === 'ky' ? 'Калыбына келтирүү кодун алуу үчүн emailиңизди киргизиңиз' : 
                'Enter your email to receive a reset code'}
@@ -300,6 +314,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 value={resetEmail}
                 onChangeText={setResetEmail}
                 placeholder="your@email.com"
+                placeholderTextColor="#9ca3af"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoFocus
@@ -326,7 +341,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
 
         {resetStep === 2 && (
           <View>
-            <Text style={[globalStyles.authSubtitleLeft, { marginBottom: 20 }]}>
+            <Text style={[globalStyles.authSubtitleLeft, { marginBottom: 20, color: '#9ca3af' }]}>
               {language === 'ru' ? `Введите код, отправленный на ${resetEmail}` : 
                language === 'ky' ? `${resetEmail} дарегине жөнөтүлгөн кодду киргизиңиз` : 
                `Enter the code sent to ${resetEmail}`}
@@ -343,6 +358,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 value={resetCode}
                 onChangeText={setResetCode}
                 placeholder="12345678"
+                placeholderTextColor="#9ca3af"
                 keyboardType="number-pad"
                 autoFocus
               />
@@ -363,7 +379,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
 
         {resetStep === 3 && (
           <View>
-            <Text style={[globalStyles.authSubtitleLeft, { marginBottom: 20 }]}>
+            <Text style={[globalStyles.authSubtitleLeft, { marginBottom: 20, color: '#9ca3af' }]}>
               {language === 'ru' ? 'Создайте новый пароль' : 
                language === 'ky' ? 'Жаңы сыр сөз түзүңүз' : 
                'Create a new password'}
@@ -380,6 +396,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 value={newPassword}
                 onChangeText={setNewPassword}
                 placeholder="••••••••"
+                placeholderTextColor="#9ca3af"
                 secureTextEntry
                 autoFocus
               />
@@ -396,6 +413,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 value={confirmNewPassword}
                 onChangeText={setConfirmNewPassword}
                 placeholder="••••••••"
+                placeholderTextColor="#9ca3af"
                 secureTextEntry
               />
             </View>
@@ -431,24 +449,22 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
           globalStyles.scrollContent, 
           { 
             paddingHorizontal: width * 0.05,
-            paddingTop: 80
+            paddingTop: 120
           }
         ]}
         extraScrollHeight={50}
       >
-        {/* FIXED: Consistent back button to match other auth screens */}
         <TouchableOpacity
           style={globalStyles.backButton}
           onPress={() => navigateAuth('welcome')}
         >
-          <Ionicons name="arrow-back" size={22} color="#0f172a" />
+          <Ionicons name="arrow-back" size={22} color="#ffffff" />
         </TouchableOpacity>
         
-        {/* FIXED: Consistent title styling */}
-        <Text style={[globalStyles.authTitleLeft, { color: '#0f172a' }]}>
+        <Text style={[globalStyles.authTitleLeft, { color: '#ffffff' }]}>
           {t.signIn}
         </Text>
-        <Text style={[globalStyles.authSubtitleLeft, { color: '#6b7280' }]}>
+        <Text style={[globalStyles.authSubtitleLeft, { color: '#9ca3af' }]}>
           {t.welcomeBackSub}
         </Text>
 
@@ -476,7 +492,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
           {/* Sign-in method toggle */}
           <View style={{
             flexDirection: 'row',
-            backgroundColor: '#f3f4f6',
+            backgroundColor: '#374151',
             borderRadius: 12,
             padding: 4,
             marginBottom: 20,
@@ -502,7 +518,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
             >
               <Text style={{ 
                 fontWeight: signInMethod === 'email' ? '600' : '400',
-                color: signInMethod === 'email' ? '#05212a' : '#0f172a'
+                color: signInMethod === 'email' ? '#05212a' : '#ffffff'
               }}>
                 Email
               </Text>
@@ -528,7 +544,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
             >
               <Text style={{ 
                 fontWeight: signInMethod === 'phone' ? '600' : '400',
-                color: signInMethod === 'phone' ? '#05212a' : '#0f172a'
+                color: signInMethod === 'phone' ? '#05212a' : '#ffffff'
               }}>
                 SMS
               </Text>
@@ -538,15 +554,11 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
           {signInMethod === 'email' ? (
             <>
               <View style={globalStyles.formGroup}>
-                <Text style={[globalStyles.formLabel, { color: '#6b7280' }]}>
+                <Text style={globalStyles.formLabel}>
                   {t.email}
                 </Text>
                 <TextInput
-                  style={[globalStyles.formInput, { 
-                    backgroundColor: '#ffffff',
-                    borderColor: '#d1d5db',
-                    color: '#0f172a'
-                  }]}
+                  style={globalStyles.formInput}
                   value={email}
                   onChangeText={setEmail}
                   placeholder="your@email.com"
@@ -559,17 +571,12 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
               </View>
 
               <View style={globalStyles.formGroup}>
-                <Text style={[globalStyles.formLabel, { color: '#6b7280' }]}>
+                <Text style={globalStyles.formLabel}>
                   {t.password}
                 </Text>
                 <View style={{ position: 'relative' }}>
                   <TextInput
-                    style={[globalStyles.formInput, { 
-                      paddingRight: 50,
-                      backgroundColor: '#ffffff',
-                      borderColor: '#d1d5db',
-                      color: '#0f172a'
-                    }]}
+                    style={[globalStyles.formInput, { paddingRight: 50 }]}
                     value={password}
                     onChangeText={setPassword}
                     placeholder="••••••••"
@@ -590,7 +597,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                     <Ionicons 
                       name={showPassword ? 'eye-off' : 'eye'} 
                       size={18} 
-                      color="#6b7280" 
+                      color="#9ca3af" 
                     />
                   </TouchableOpacity>
                 </View>
@@ -606,29 +613,75 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
               </TouchableOpacity>
             </>
           ) : (
-            <View style={globalStyles.formGroup}>
-              <Text style={[globalStyles.formLabel, { color: '#6b7280' }]}>
-                {t.phoneNumber}
-              </Text>
-              <TextInput
-                style={[globalStyles.formInput, { 
-                  backgroundColor: '#ffffff',
-                  borderColor: '#d1d5db',
-                  color: '#0f172a'
-                }]}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+996 555 123 456"
-                placeholderTextColor="#9ca3af"
-                keyboardType="phone-pad"
-                autoFocus={!authData?.phone}
-                returnKeyType="done"
-                onSubmitEditing={handleSignIn}
-              />
-              <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-                {t.smsSignInHint}
-              </Text>
-            </View>
+            <>
+              <View style={globalStyles.formGroup}>
+                <Text style={globalStyles.formLabel}>
+                  {t.phoneNumber}
+                </Text>
+                
+                {/* Phone input with country picker */}
+                <View style={globalStyles.phoneInputContainer}>
+                  <TouchableOpacity
+                    style={globalStyles.phoneCountry}
+                    onPress={() => setShowCountries(!showCountries)}
+                  >
+                    <Text style={globalStyles.flagText}>{selectedCountry?.flag}</Text>
+                    <Text style={globalStyles.countryCodeText}>{countryCode}</Text>
+                    <Ionicons name="chevron-down" size={14} color="#9ca3af" />
+                  </TouchableOpacity>
+                  
+                  <TextInput
+                    style={globalStyles.phoneInput}
+                    placeholder="555 123 456"
+                    placeholderTextColor="#9ca3af"
+                    value={phone}
+                    onChangeText={(text) => setPhone(formatPhone(text))}
+                    maxLength={11}
+                    keyboardType="phone-pad"
+                    autoFocus={!authData?.phone}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSignIn}
+                  />
+                </View>
+                
+                <Text style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+                  {t.smsSignInHint}
+                </Text>
+              </View>
+
+              {/* Country Selection Modal */}
+              <Modal
+                visible={showCountries}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setShowCountries(false)}
+              >
+                <TouchableOpacity
+                  style={globalStyles.modalOverlay}
+                  onPress={() => setShowCountries(false)}
+                >
+                  <View style={globalStyles.countryModal}>
+                    <Text style={globalStyles.modalTitle}>Select Country</Text>
+                    <ScrollView>
+                      {countryCodes.map((country, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={globalStyles.countryOption}
+                          onPress={() => {
+                            setCountryCode(country.code);
+                            setShowCountries(false);
+                          }}
+                        >
+                          <Text style={globalStyles.countryOptionText}>
+                            {country.flag} {country.code} {country.country}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </TouchableOpacity>
+              </Modal>
+            </>
           )}
           
           <TouchableOpacity
@@ -651,7 +704,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
 
           {/* Create Account Link */}
           <View style={{ marginTop: 20, alignItems: 'center' }}>
-            <Text style={[globalStyles.alreadyAccountText, { color: '#6b7280' }]}>
+            <Text style={[globalStyles.alreadyAccountText, { color: '#9ca3af' }]}>
               {t.dontHaveAccount}{' '}
               <Text
                 style={[globalStyles.linkText, { color: '#98DDA6' }]}
@@ -671,7 +724,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
         }}>
           <Text style={[globalStyles.footerText, { 
             fontSize: width * 0.03,
-            color: globalStyles.textDim,
+            color: '#9ca3af',
             textAlign: 'center'
           }]}>
             {language === 'en' ? 'By signing in you agree to our ' : 
@@ -679,7 +732,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
              'Кирип, биздин '}
             <Text 
               style={[globalStyles.linkText, { 
-                color: '#6d28d9', 
+                color: '#98DDA6', 
                 textDecorationLine: 'underline'
               }]}
               onPress={openTerms}
@@ -693,7 +746,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
              ' жана '}
             <Text 
               style={[globalStyles.linkText, { 
-                color: '#6d28d9', 
+                color: '#98DDA6', 
                 textDecorationLine: 'underline'
               }]}
               onPress={openPrivacy}
