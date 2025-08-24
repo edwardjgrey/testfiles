@@ -508,7 +508,7 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
                 placeholderTextColor="#6b7280"
                 keyboardType="number-pad"
                 maxLength={6}
-                autoFocus
+                
               />
 
               <TouchableOpacity

@@ -169,7 +169,7 @@ const CodeVerification = ({ authData, language, setLanguage, navigateAuth, handl
             onChangeText={(text) => setCode(text.replace(/\D/g, ''))}
             maxLength={6}
             keyboardType="number-pad"
-            autoFocus
+      
           />
           
           <View style={globalStyles.resendSection}>

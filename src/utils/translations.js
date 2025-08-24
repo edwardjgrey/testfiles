@@ -447,13 +447,13 @@ export const translations = {
 
 // UPDATED: Country codes with Uzbekistan and additional support
 export const countryCodes = [
-  { code: '+996', flag: '🇰🇬', country: 'Kyrgyzstan' },
-  { code: '+998', flag: '🇺🇿', country: 'Uzbekistan' },
-  { code: '+1', flag: '🇺🇸', country: 'USA' },
-  { code: '+44', flag: '🇬🇧', country: 'UK' },
-  { code: '+7', flag: '🇷🇺', country: 'Russia' },
-  { code: '+7', flag: '🇰🇿', country: 'Kazakhstan' },
-  { code: '+992', flag: '🇹🇯', country: 'Tajikistan' }
+  { code: '+996', flag: '🇰🇬', country: 'Kyrgyzstan', length: 9, format: 'XXX XXX XXX' },
+  { code: '+998', flag: '🇺🇿', country: 'Uzbekistan', length: 9, format: 'XX XXX XX XX' },
+  { code: '+1', flag: '🇺🇸', country: 'USA', length: 10, format: '(XXX) XXX-XXXX' },
+  { code: '+44', flag: '🇬🇧', country: 'UK', length: 11, format: 'XXXX XXX XXXX' },
+  { code: '+7', flag: '🇷🇺', country: 'Russia', length: 10, format: 'XXX XXX-XX-XX' },
+  { code: '+7', flag: '🇰🇿', country: 'Kazakhstan', length: 10, format: 'XXX XXX XX XX' },
+  { code: '+992', flag: '🇹🇯', country: 'Tajikistan', length: 9, format: 'XX XXX XXXX' }
 ];
 
 // NEW: Security settings translations

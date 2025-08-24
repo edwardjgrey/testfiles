@@ -69,13 +69,46 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
     }
   };
 
-  // Format phone number for display
-  const formatPhone = (text) => {
-    const digits = text.replace(/\D/g, '');
-    const match = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})$/);
-    if (!match) return digits;
-    return [match[1], match[2], match[3]].filter(Boolean).join(' ');
-  };
+      // Format phone number for display
+    const formatPhone = (text, selectedCountry) => {
+      const digits = text.replace(/\D/g, '');
+      
+      if (!selectedCountry) return digits;
+      
+      // Format based on country
+      switch (selectedCountry.code) {
+        case '+996': // Kyrgyzstan - 9 digits: XXX XXX XXX
+        case '+992': // Tajikistan - 9 digits
+          const kg = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})$/);
+          if (!kg) return digits;
+          return [kg[1], kg[2], kg[3]].filter(Boolean).join(' ');
+          
+        case '+44': // UK - 11 digits: XXXX XXX XXXX
+          const uk = digits.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
+          if (!uk) return digits;
+          return [uk[1], uk[2], uk[3]].filter(Boolean).join(' ');
+          
+        case '+1': // USA - 10 digits: (XXX) XXX-XXXX
+          const us = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+          if (!us) return digits;
+          let formatted = '';
+          if (us[1]) formatted += `(${us[1]}`;
+          if (us[2]) formatted += `) ${us[2]}`;
+          if (us[3]) formatted += `-${us[3]}`;
+          return formatted;
+          
+        case '+7': // Russia/Kazakhstan - 10 digits: XXX XXX-XX-XX
+          const ru = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})$/);
+          if (!ru) return digits;
+          return [ru[1], ru[2], ru[3], ru[4]].filter(Boolean).join(' ');
+          
+        default:
+          // Generic format for other countries
+          const generic = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+          if (!generic) return digits;
+          return [generic[1], generic[2], generic[3]].filter(Boolean).join(' ');
+      }
+    };
 
   const handleSignIn = async () => {
     try {
@@ -317,7 +350,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 placeholderTextColor="#9ca3af"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                autoFocus
+                
               />
             </View>
 
@@ -360,7 +393,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 placeholder="12345678"
                 placeholderTextColor="#9ca3af"
                 keyboardType="number-pad"
-                autoFocus
+                
               />
             </View>
 
@@ -398,7 +431,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 placeholder="••••••••"
                 placeholderTextColor="#9ca3af"
                 secureTextEntry
-                autoFocus
+                
               />
             </View>
 
@@ -565,7 +598,6 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                   placeholderTextColor="#9ca3af"
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  autoFocus={!authData?.email}
                   returnKeyType="next"
                 />
               </View>
@@ -584,7 +616,6 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                     secureTextEntry={!showPassword}
                     returnKeyType="done"
                     onSubmitEditing={handleSignIn}
-                    autoFocus={!!authData?.email}
                   />
                   <TouchableOpacity
                     style={{
@@ -632,15 +663,12 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                   
                   <TextInput
                     style={globalStyles.phoneInput}
-                    placeholder="555 123 456"
+                    placeholder={selectedCountry?.format?.replace(/X/g, '0') || "555 123 456"}
                     placeholderTextColor="#9ca3af"
                     value={phone}
-                    onChangeText={(text) => setPhone(formatPhone(text))}
-                    maxLength={11}
+                    onChangeText={(text) => setPhone(formatPhone(text, selectedCountry))}
+                    maxLength={selectedCountry?.length + 2 || 13} // +2 for spaces
                     keyboardType="phone-pad"
-                    autoFocus={!authData?.phone}
-                    returnKeyType="done"
-                    onSubmitEditing={handleSignIn}
                   />
                 </View>
                 

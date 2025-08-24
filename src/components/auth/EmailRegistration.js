@@ -170,7 +170,6 @@ const EmailRegistration = ({ language, setLanguage, navigateAuth, handleEmailReg
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              autoFocus
               returnKeyType="next"
             />
           </View>

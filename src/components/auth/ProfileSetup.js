@@ -161,7 +161,7 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
               onChangeText={setFirstName}
               placeholder="John"
               placeholderTextColor="#69696988"
-              autoFocus
+              
               returnKeyType="next"
             />
           </View>
