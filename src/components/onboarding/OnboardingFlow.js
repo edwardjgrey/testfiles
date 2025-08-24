@@ -94,10 +94,6 @@ const OnboardingFlow = ({ language, setLanguage, onComplete }) => {
     }
   };
 
-  const handleSkip = () => {
-    onComplete();
-  };
-
   const handlePrevious = () => {
     if (currentScreen > 0) {
       Animated.timing(fadeAnim, {
@@ -128,15 +124,6 @@ const OnboardingFlow = ({ language, setLanguage, onComplete }) => {
         <LanguageSelector language={language} setLanguage={setLanguage} />
       </View>
 
-      {/* Skip Button */}
-      <View style={styles.topControls}>
-        <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-          <Text style={styles.skipText}>
-            {language === 'ru' ? 'Пропустить' : language === 'ky' ? 'Өткөрүп жиберүү' : 'Skip'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         <ScrollView 
           ref={scrollViewRef}
@@ -150,7 +137,7 @@ const OnboardingFlow = ({ language, setLanguage, onComplete }) => {
             <View style={[styles.iconCircle, { backgroundColor: currentData.gradient[0] + '20' }]}>
               <Ionicons 
                 name={currentData.icon} 
-                size={80} 
+                size={60} 
                 color={currentData.iconColor} 
               />
             </View>
@@ -227,38 +214,24 @@ const OnboardingFlow = ({ language, setLanguage, onComplete }) => {
 const styles = {
   container: {
     flex: 1,
-    backgroundColor: '',
+    backgroundColor: '#05212a',
   },
   header: {
     position: 'absolute',
-    top: 30, // Moved down from 25
-    left: 120, // Moved further left from 20
+    top: 50,
+    right: 20,
     zIndex: 1000,
-  },
-  topControls: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-  },
-  skipButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  skipText: {
-    fontSize: 16,
-    color: 'white',
-    fontWeight: '600',
   },
   content: {
     flex: 1,
+    paddingTop: 40, // Reduced since no skip button
   },
   scrollContent: {
     flexGrow: 1,
+    paddingTop: 60, // Adjusted spacing
   },
   illustrationContainer: {
-    height: height * 0.45,
+    height: height * 0.35,
     marginHorizontal: 20,
     borderRadius: 30,
     backgroundColor: '#667eea',
@@ -266,12 +239,12 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    marginBottom: 40,
+    marginBottom: 30,
   },
   iconCircle: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -304,7 +277,9 @@ const styles = {
   textContainer: {
     paddingHorizontal: 30,
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 50,
+    flex: 1,
+    justifyContent: 'center',
   },
   title: {
     fontSize: 32,

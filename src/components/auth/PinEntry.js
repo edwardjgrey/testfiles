@@ -1,4 +1,4 @@
-// src/components/auth/PinEntry.js - Updated with Forgot PIN option
+// src/components/auth/PinEntry.js - Enhanced with Biometric-First Authentication
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -26,12 +26,15 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
   const [isLockedOut, setIsLockedOut] = useState(false);
   const [lockoutTime, setLockoutTime] = useState(0);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricSetup, setBiometricSetup] = useState(false);
   const [biometricType, setBiometricType] = useState('');
+  const [showPinInput, setShowPinInput] = useState(false);
+  const [biometricPrompted, setBiometricPrompted] = useState(false);
   
   // Forgot PIN modal states
   const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotStep, setForgotStep] = useState(1); // 1: phone/email, 2: code, 3: new PIN
-  const [resetMethod, setResetMethod] = useState(''); // 'phone' or 'email'
+  const [forgotStep, setForgotStep] = useState(1);
+  const [resetMethod, setResetMethod] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmNewPin, setConfirmNewPin] = useState('');
@@ -66,6 +69,21 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
     };
   }, [isLockedOut, lockoutTime]);
 
+  // Auto-prompt biometric when component mounts and is available
+  useEffect(() => {
+    const promptBiometric = async () => {
+      if (biometricAvailable && biometricSetup && !biometricPrompted && !isLockedOut) {
+        setBiometricPrompted(true);
+        // Small delay to let the UI settle
+        setTimeout(() => {
+          handleBiometricAuth(true); // true = auto-prompted
+        }, 500);
+      }
+    };
+
+    promptBiometric();
+  }, [biometricAvailable, biometricSetup, biometricPrompted, isLockedOut]);
+
   const checkSecurityStatus = async () => {
     try {
       const status = await SecurityService.getSecurityStatus(user.id);
@@ -82,10 +100,13 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
   const checkBiometricAvailability = async () => {
     try {
       const biometricInfo = await BiometricService.getBiometricInfo();
-      setBiometricAvailable(biometricInfo.available && biometricInfo.isSetup);
+      setBiometricAvailable(biometricInfo.available);
+      setBiometricSetup(biometricInfo.isSetup);
       setBiometricType(biometricInfo.typeName || 'Biometric');
     } catch (error) {
       console.error('Biometric check error:', error);
+      setBiometricAvailable(false);
+      setBiometricSetup(false);
     }
   };
 
@@ -94,12 +115,18 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
       en: {
         enterPin: 'Enter Your PIN',
         enterPinSubtitle: 'Enter your 6-digit PIN to continue',
+        biometricTitle: 'Biometric Authentication',
+        biometricSubtitle: 'Use biometric to sign in quickly',
         incorrectPin: 'Incorrect PIN',
         attemptsRemaining: 'attempts remaining',
         accountLocked: 'Account Locked',
         tryAgainIn: 'Try again in',
         minutes: 'minutes',
         useBiometric: `Use ${biometricType}`,
+        enterPinInstead: 'Enter PIN Instead',
+        biometricFailed: 'Biometric Failed',
+        biometricCancelled: 'Biometric Cancelled',
+        tryBiometricAgain: 'Try Biometric Again',
         cancel: 'Cancel',
         delete: 'Delete',
         forgotPin: 'Forgot PIN?',
@@ -115,19 +142,26 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
         resetComplete: 'PIN Reset Complete',
         codeSent: 'Code sent!',
         pinMismatch: 'PINs do not match',
-        resetPin: 'Reset PIN',
         back: 'Back',
         continue: 'Continue',
+        biometricPrompt: 'Touch sensor or look at camera to authenticate',
+        fallbackToPinPrompt: 'Use PIN instead?'
       },
       ru: {
         enterPin: 'Введите PIN-код',
         enterPinSubtitle: 'Введите 6-значный PIN для продолжения',
+        biometricTitle: 'Биометрическая аутентификация',
+        biometricSubtitle: 'Используйте биометрию для быстрого входа',
         incorrectPin: 'Неверный PIN-код',
         attemptsRemaining: 'попыток осталось',
         accountLocked: 'Аккаунт заблокирован',
         tryAgainIn: 'Попробуйте через',
         minutes: 'минут',
         useBiometric: `Использовать ${biometricType}`,
+        enterPinInstead: 'Ввести PIN',
+        biometricFailed: 'Биометрия не удалась',
+        biometricCancelled: 'Биометрия отменена',
+        tryBiometricAgain: 'Попробовать биометрию снова',
         cancel: 'Отмена',
         delete: 'Удалить',
         forgotPin: 'Забыли PIN?',
@@ -145,16 +179,24 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
         pinMismatch: 'PIN-коды не совпадают',
         back: 'Назад',
         continue: 'Продолжить',
+        biometricPrompt: 'Приложите палец или посмотрите в камеру',
+        fallbackToPinPrompt: 'Использовать PIN?'
       },
       ky: {
         enterPin: 'PIN кодун киргизиңиз',
         enterPinSubtitle: 'Улантуу үчүн 6 сандуу PIN киргизиңиз',
+        biometricTitle: 'Биометрикалык аутентификация',
+        biometricSubtitle: 'Тез кирүү үчүн биометрияны колдонуңуз',
         incorrectPin: 'Туура эмес PIN код',
         attemptsRemaining: 'аракет калды',
         accountLocked: 'Аккаунт бөгөттөлдү',
         tryAgainIn: 'Кайра аракет кылыңыз',
         minutes: 'мүнөт',
         useBiometric: `${biometricType} колдонуу`,
+        enterPinInstead: 'PIN киргизүү',
+        biometricFailed: 'Биометрия ийгиликсиз',
+        biometricCancelled: 'Биометрия жокко чыгарылды',
+        tryBiometricAgain: 'Биометрияны кайра текшерүү',
         cancel: 'Жокко чыгаруу',
         delete: 'Өчүрүү',
         forgotPin: 'PIN унуттуңузбу?',
@@ -172,6 +214,8 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
         pinMismatch: 'PIN коддор дал келген жок',
         back: 'Артка',
         continue: 'Улантуу',
+        biometricPrompt: 'Манжаңызды коюңуз же камерага караңыз',
+        fallbackToPinPrompt: 'PIN колдонууму?'
       }
     };
     return texts[language]?.[key] || texts.en[key] || key;
@@ -234,25 +278,65 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
     }
   };
 
-  const handleBiometricAuth = async () => {
+  const handleBiometricAuth = async (isAutoPrompted = false) => {
     try {
       setLoading(true);
       const result = await BiometricService.authenticateWithBiometric();
 
       if (result.success) {
         onSuccess();
-      } else if (!result.cancelled) {
-        Alert.alert('Biometric Failed', result.error);
+      } else if (result.cancelled) {
+        // User cancelled biometric - show fallback options
+        if (isAutoPrompted) {
+          showBiometricFallbackOptions();
+        }
+      } else {
+        // Biometric failed - show error and fallback options
+        showBiometricFailedOptions(result.error);
       }
     } catch (error) {
       console.error('Biometric authentication error:', error);
-      Alert.alert('Biometric Failed', 'Please try again or use your PIN');
+      showBiometricFailedOptions('Biometric authentication failed. Please try again or use your PIN.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Forgot PIN handlers
+  const showBiometricFallbackOptions = () => {
+    Alert.alert(
+      getText('biometricCancelled'),
+      getText('fallbackToPinPrompt'),
+      [
+        {
+          text: getText('tryBiometricAgain'),
+          onPress: () => handleBiometricAuth(false)
+        },
+        {
+          text: getText('enterPinInstead'),
+          onPress: () => setShowPinInput(true)
+        }
+      ]
+    );
+  };
+
+  const showBiometricFailedOptions = (errorMessage) => {
+    Alert.alert(
+      getText('biometricFailed'),
+      errorMessage || 'Please try again or use your PIN',
+      [
+        {
+          text: getText('tryBiometricAgain'),
+          onPress: () => handleBiometricAuth(false)
+        },
+        {
+          text: getText('enterPinInstead'),
+          onPress: () => setShowPinInput(true)
+        }
+      ]
+    );
+  };
+
+  // Forgot PIN handlers (same as before)
   const handleForgotPin = () => {
     setShowForgotModal(true);
     setForgotStep(1);
@@ -327,7 +411,6 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
       });
 
       if (result.success) {
-        // Update local PIN storage
         await SecurityService.setupPin(newPin, user.id);
         
         setShowForgotModal(false);
@@ -422,7 +505,130 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
     );
   };
 
-  // Forgot PIN Modal
+  // Render biometric prompt screen (shown first if available)
+  const renderBiometricPrompt = () => (
+    <View style={styles.biometricContainer}>
+      <View style={styles.biometricContent}>
+        <View style={styles.biometricIcon}>
+          <Ionicons
+            name={biometricType === 'Face ID' ? 'scan' : 'finger-print'}
+            size={80}
+            color="#98DDA6"
+          />
+        </View>
+        
+        <Text style={styles.biometricTitle}>
+          {getText('biometricTitle')}
+        </Text>
+        
+        <Text style={styles.biometricSubtitle}>
+          {getText('biometricPrompt')}
+        </Text>
+        
+        <TouchableOpacity
+          style={styles.biometricButton}
+          onPress={() => handleBiometricAuth(false)}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#000000" />
+          ) : (
+            <>
+              <Ionicons
+                name={biometricType === 'Face ID' ? 'scan' : 'finger-print'}
+                size={24}
+                color="#000000"
+              />
+              <Text style={styles.biometricButtonText}>
+                {getText('useBiometric')}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.fallbackButton}
+          onPress={() => setShowPinInput(true)}
+        >
+          <Text style={styles.fallbackButtonText}>
+            {getText('enterPinInstead')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // Render PIN input screen (shown as fallback)
+  const renderPinInput = () => (
+    <Animated.View
+      style={[
+        styles.pinContainer,
+        {
+          opacity: fadeAnimation,
+          transform: [{ translateX: shakeAnimation }]
+        }
+      ]}
+    >
+      {/* Title */}
+      <View style={styles.titleContainer}>
+        <Text style={styles.title}>{getText('enterPin')}</Text>
+        <Text style={styles.subtitle}>
+          {isLockedOut
+            ? `${getText('tryAgainIn')} ${formatLockoutTime()}`
+            : getText('enterPinSubtitle')
+          }
+        </Text>
+
+        {attempts > 0 && !isLockedOut && (
+          <Text style={styles.attemptsText}>
+            {attempts}/5 {getText('attemptsRemaining')}
+          </Text>
+        )}
+      </View>
+
+      {/* PIN Dots */}
+      {renderPinDots()}
+
+      {/* Number Pad */}
+      {renderNumberPad()}
+
+      {/* Biometric Option (if available and not locked out) */}
+      {biometricAvailable && biometricSetup && !isLockedOut && (
+        <TouchableOpacity
+          style={styles.switchToBiometricButton}
+          onPress={() => setShowPinInput(false)}
+        >
+          <Ionicons
+            name={biometricType === 'Face ID' ? 'scan' : 'finger-print'}
+            size={20}
+            color="#98DDA6"
+          />
+          <Text style={styles.switchToBiometricText}>
+            {getText('useBiometric')}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Forgot PIN Link */}
+      {!isLockedOut && (
+        <TouchableOpacity
+          style={styles.forgotPinButton}
+          onPress={handleForgotPin}
+        >
+          <Text style={styles.forgotPinText}>{getText('forgotPin')}</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Loading Indicator */}
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#98DDA6" />
+        </View>
+      )}
+    </Animated.View>
+  );
+
+  // Forgot PIN Modal (same as before, keeping for completeness)
   const renderForgotPinModal = () => (
     <Modal
       visible={showForgotModal}
@@ -508,7 +714,6 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
                 placeholderTextColor="#6b7280"
                 keyboardType="number-pad"
                 maxLength={6}
-                
               />
 
               <TouchableOpacity
@@ -632,73 +837,12 @@ const PinEntry = ({ language, onSuccess, onCancel, user }) => {
           )}
         </View>
 
-        <Animated.View
-          style={[
-            styles.mainContent,
-            {
-              opacity: fadeAnimation,
-              transform: [{ translateX: shakeAnimation }]
-            }
-          ]}
-        >
-          {/* Title */}
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>{getText('enterPin')}</Text>
-            <Text style={styles.subtitle}>
-              {isLockedOut
-                ? `${getText('tryAgainIn')} ${formatLockoutTime()}`
-                : getText('enterPinSubtitle')
-              }
-            </Text>
-
-            {attempts > 0 && !isLockedOut && (
-              <Text style={styles.attemptsText}>
-                {attempts}/5 {getText('attemptsRemaining')}
-              </Text>
-            )}
-          </View>
-
-          {/* PIN Dots */}
-          {renderPinDots()}
-
-          {/* Number Pad */}
-          {renderNumberPad()}
-
-          {/* Forgot PIN Link */}
-          {!isLockedOut && (
-            <TouchableOpacity
-              style={styles.forgotPinButton}
-              onPress={handleForgotPin}
-            >
-              <Text style={styles.forgotPinText}>{getText('forgotPin')}</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Loading Indicator */}
-          {loading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#98DDA6" />
-            </View>
-          )}
-        </Animated.View>
-
-        {/* Biometric Login Button */}
-        {biometricAvailable && !isLockedOut && (
-          <TouchableOpacity
-            style={styles.biometricButton}
-            onPress={handleBiometricAuth}
-            disabled={loading}
-          >
-            <Ionicons
-              name={biometricType === 'Face ID' ? 'scan' : 'finger-print'}
-              size={24}
-              color="#98DDA6"
-            />
-            <Text style={styles.biometricButtonText}>
-              {getText('useBiometric')}
-            </Text>
-          </TouchableOpacity>
-        )}
+        {/* Main Authentication Content */}
+        {/* Show biometric prompt if available and PIN input not explicitly requested */}
+        {biometricAvailable && biometricSetup && !showPinInput && !isLockedOut 
+          ? renderBiometricPrompt() 
+          : renderPinInput()
+        }
       </View>
 
       {/* Forgot PIN Modal */}
@@ -740,7 +884,77 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#9ca3af',
   },
-  mainContent: {
+
+  // Biometric Prompt Styles
+  biometricContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  biometricContent: {
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  biometricIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(152, 221, 166, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 30,
+    borderWidth: 2,
+    borderColor: 'rgba(152, 221, 166, 0.3)',
+  },
+  biometricTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  biometricSubtitle: {
+    fontSize: 16,
+    color: '#9ca3af',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 40,
+  },
+  biometricButton: {
+    backgroundColor: '#98DDA6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    marginBottom: 20,
+    minWidth: 200,
+    shadowColor: '#98DDA6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  biometricButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginLeft: 8,
+  },
+  fallbackButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  fallbackButtonText: {
+    fontSize: 16,
+    color: '#98DDA6',
+    fontWeight: '500',
+    textDecorationLine: 'underline',
+  },
+
+  // PIN Input Styles
+  pinContainer: {
     flex: 1,
     justifyContent: 'space-between',
   },
@@ -824,6 +1038,26 @@ const styles = StyleSheet.create({
   numberButtonTextDisabled: {
     color: '#6b7280',
   },
+  switchToBiometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(152, 221, 166, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(152, 221, 166, 0.3)',
+    alignSelf: 'center',
+  },
+  switchToBiometricText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#98DDA6',
+    marginLeft: 8,
+  },
   forgotPinButton: {
     alignSelf: 'center',
     marginTop: 20,
@@ -840,29 +1074,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  biometricButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(152, 221, 166, 0.1)',
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    marginTop: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(152, 221, 166, 0.3)',
-    alignSelf: 'stretch',
-    marginHorizontal: 20,
-  },
-  biometricButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#98DDA6',
-    marginLeft: 8,
-  },
 
-  // Modal styles
+  // Modal styles (keeping existing ones)
   modalContainer: {
     flex: 1,
     backgroundColor: '#05212a',
