@@ -1,677 +1,813 @@
-// App.js - FIXED VERSION with proper StatusBar configuration
+// App.js - Enhanced with proper setup offer handling
 import React, { useState, useEffect } from 'react';
-import { StatusBar, Alert, View, Text, ActivityIndicator } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { View, Alert, ActivityIndicator, Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Import components
+// Onboarding & Auth Components
 import OnboardingFlow from './src/components/onboarding/OnboardingFlow';
 import AuthWelcome from './src/components/auth/AuthWelcome';
-import SignInForm from './src/components/auth/SignInForm';
-import EmailRegistration from './src/components/auth/EmailRegistration';
 import PhoneEntry from './src/components/auth/PhoneEntry';
+import EmailRegistration from './src/components/auth/EmailRegistration';
 import CodeVerification from './src/components/auth/CodeVerification';
 import ProfileSetup from './src/components/auth/ProfileSetup';
 import SubscriptionPlans from './src/components/auth/SubscriptionPlans';
 import FinancialOnboarding from './src/components/auth/FinancialOnboarding';
+import GoalsSetup from './src/components/auth/GoalsSetup';
+import SignInForm from './src/components/auth/SignInForm';
 import PinSetup from './src/components/auth/PinSetup';
 import PinEntry from './src/components/auth/PinEntry';
+import BiometricSetupOffer from './src/components/auth/BiometricSetupOffer';
+
+// Main App Components
 import MainApp from './src/components/MainApp';
 
-// Import services
+// Services
 import ApiService from './src/services/apiService';
 import SecurityService from './src/services/securityService';
+import BiometricService from './src/services/biometricService';
+import SubscriptionService from './src/services/subscriptionService';
 
 export default function App() {
-  // App State Management
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  // Core states
+  const [loading, setLoading] = useState(true);
+  const [isFirstLaunch, setIsFirstLaunch] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentAuthView, setCurrentAuthView] = useState('welcome');
+  const [requiresPinAuth, setRequiresPinAuth] = useState(false);
   const [language, setLanguage] = useState('en');
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   
-  // Security State
-  const [pinSetupRequired, setPinSetupRequired] = useState(false);
-  const [pinAuthRequired, setPinAuthRequired] = useState(false);
-  const [securitySetupComplete, setSecuritySetupComplete] = useState(false);
+  // Auth flow states
+  const [currentScreen, setCurrentScreen] = useState('welcome');
+  const [authData, setAuthData] = useState({});
+  const [userData, setUserData] = useState(null);
   
-  // Universal data collection for ALL auth methods
-  const [authData, setAuthData] = useState({
-    // Auth method tracking
-    authMethod: '',
-    isNewUser: false,
-    
-    // Basic auth credentials
-    email: '',
-    password: '',
-    phone: '',
-    countryCode: '+996',
-    verificationCode: '',
-    
-    // Social auth data
-    googleId: '',
-    appleId: '',
-    socialToken: '',
-    
-    // Personal information (collected for ALL users)
-    firstName: '',
-    lastName: '',
-    profilePicture: null,
-    
-    // Financial information (collected for ALL users)
-    monthlyIncome: '',
-    currency: 'KGS',
-    selectedPlan: 'basic',
-    
-    // Additional data
-    bio: '',
-    dateOfBirth: '',
-    occupation: ''
+  // Setup offer states (NEW)
+  const [showBiometricOffer, setShowBiometricOffer] = useState(false);
+  const [showPlanUpgradeOffer, setShowPlanUpgradeOffer] = useState(false);
+  const [showIncompleteSetupOffer, setShowIncompleteSetupOffer] = useState(false);
+  const [setupOffers, setSetupOffers] = useState({
+    biometric: false,
+    subscription: false,
+    financial: false,
+    goals: false,
+    security: false
   });
 
-  // FIXED: Set StatusBar configuration on app load
   useEffect(() => {
-    // Configure StatusBar for the entire app
-    StatusBar.setBarStyle('light-content', true);
-    StatusBar.setBackgroundColor('#05212A', true);
-  }, []);
-
-  // Initialize the app
-  useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        // Check for existing authentication
-        await checkExistingAuth();
-        
-        // Test backend connection (non-blocking)
-        testBackendConnection();
-        
-      } catch (error) {
-        // Don't block the app if initialization fails
-        setIsLoading(false);
-      }
-    };
-
     initializeApp();
   }, []);
 
-  // Separate function for testing backend connection
-  const testBackendConnection = async () => {
+  const initializeApp = async () => {
     try {
-      const response = await ApiService.testConnection();
-    } catch (error) {
-      // Show connection error after a delay, but don't block the app
-      setTimeout(() => {
-        Alert.alert(
-          'Connection Issue', 
-          'Cannot connect to server. Some features may not work. Please check your internet connection.',
-          [
-            { text: 'OK' },
-            { text: 'Retry', onPress: testBackendConnection }
-          ]
-        );
-      }, 2000);
-    }
-  };
-
-  // Enhanced checkExistingAuth function with security checks
-  const checkExistingAuth = async () => {
-    try {
-      setIsLoading(true);
+      console.log('🚀 Initializing Akchabar...');
       
-      // First check if we have a token
-      const token = await ApiService.getToken();
+      // Check if first launch
+      const hasLaunched = await AsyncStorage.getItem('hasLaunched');
+      const savedLanguage = await AsyncStorage.getItem('appLanguage');
       
-      if (!token) {
+      if (savedLanguage) {
+        setLanguage(savedLanguage);
+      }
+      
+      if (!hasLaunched) {
+        setIsFirstLaunch(true);
+        setLoading(false);
         return;
       }
       
-      // Validate the token with the backend
-      const response = await ApiService.validateToken();
+      // Check authentication
+      const authResult = await checkAuthentication();
       
-      if (response.success && response.user) {
-        setUser(response.user);
-        setIsAuthenticated(true);
-        setHasSeenOnboarding(true);
+      if (authResult.authenticated) {
+        setUserData(authResult.user);
         
-        // Set the current user ID in SecurityService
-        SecurityService.setCurrentUser(response.user.id);
+        // Check what setup offers to show for returning user
+        await checkSetupOffers(authResult.user);
         
-        // Check security setup after successful auth
-        await checkSecuritySetup(response.user.id);
-      } else {
-        // Clear invalid token
-        await ApiService.removeToken();
-      }
-    } catch (error) {
-      // If there's any error, clear the auth state and let user start fresh
-      await ApiService.removeToken();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Check if user needs to setup PIN or authenticate with PIN
-  const checkSecuritySetup = async (userId) => {
-    try {
-      // Ensure SecurityService has the correct user ID
-      SecurityService.setCurrentUser(userId);
-      
-      const securityStatus = await SecurityService.getSecurityStatus(userId);
-      
-      if (!securityStatus.pinSetup) {
-        setPinSetupRequired(true);
-        setPinAuthRequired(false);
-        setSecuritySetupComplete(false);
-      } else if (securityStatus.isLockedOut) {
-        setPinSetupRequired(false);
-        setPinAuthRequired(true);
-        setSecuritySetupComplete(false);
-      } else {
-        // PIN is setup, check if we need to authenticate
-        const pinAuthNeeded = await SecurityService.requiresPinAuth(userId);
-        if (pinAuthNeeded.required) {
-          setPinSetupRequired(false);
-          setPinAuthRequired(true);
-          setSecuritySetupComplete(false);
+        // Check if PIN authentication is required
+        const pinRequired = await checkPinRequirement(authResult.user);
+        
+        if (pinRequired) {
+          setRequiresPinAuth(true);
         } else {
-          setPinSetupRequired(false);
-          setPinAuthRequired(false);
-          setSecuritySetupComplete(true);
+          setIsAuthenticated(true);
         }
       }
+      
+      setLoading(false);
     } catch (error) {
-      // If security check fails, require PIN setup for safety
-      setPinSetupRequired(true);
-      setPinAuthRequired(false);
-      setSecuritySetupComplete(false);
+      console.error('Initialization error:', error);
+      setLoading(false);
     }
   };
 
-  // Handle successful PIN setup
-  const handlePinSetupComplete = async () => {
-    setPinSetupRequired(false);
-    setPinAuthRequired(false);
-    setSecuritySetupComplete(true);
-  };
-
-  // Handle successful PIN authentication
-  const handlePinAuthSuccess = async () => {
-    setPinSetupRequired(false);
-    setPinAuthRequired(false);
-    setSecuritySetupComplete(true);
-  };
-
-  const checkUserExistsEarly = async (email, phone) => {
+  // Check what setup offers should be shown (NEW)
+  const checkSetupOffers = async (user) => {
     try {
-      const result = await ApiService.checkUserExists(email, phone);
+      console.log('🔍 Checking setup offers for returning user:', user.id);
       
-      if (result.exists) {
-        if (result.user.email && result.user.authMethod === 'email') {
-          setAuthData(prev => ({ 
-            ...prev, 
-            email: result.user.email,
-            authMethod: 'signin'
-          }));
-          navigateAuth('signin-form');
-          
-          setTimeout(() => {
-            Alert.alert(
-              'Welcome Back!',
-              'We found your account. Please enter your password to sign in.',
-              [{ text: 'OK' }]
-            );
-          }, 500);
-          
-        } else if (result.user.phone && result.user.authMethod === 'phone') {
-          setAuthData(prev => ({ 
-            ...prev, 
-            phone: result.user.phone,
-            countryCode: '+996',
-            authMethod: 'signin',
-            isSignIn: true
-          }));
-          
-          await handlePhoneSignIn(result.user.phone);
-          
-        } else {
-          navigateAuth('signin-form');
-          
-          setTimeout(() => {
-            Alert.alert(
-              'Account Found',
-              'We found your account. Please sign in to continue.',
-              [{ text: 'OK' }]
-            );
-          }, 500);
-        }
-        
-        return true;
+      const offers = {
+        biometric: false,
+        subscription: false,
+        financial: false,
+        goals: false,
+        security: false
+      };
+      
+      // Check biometric setup
+      const biometricInfo = await BiometricService.getBiometricInfo(user.id);
+      if (biometricInfo.available && !biometricInfo.isSetup) {
+        offers.biometric = true;
+        console.log('📱 Biometric setup offer will be shown');
       }
       
-      return false;
+      // Check subscription status
+      const subscription = await SubscriptionService.getCurrentSubscription();
+      if (subscription?.plan_id === 'basic') {
+        const usage = await SubscriptionService.getUsageAnalytics();
+        
+        // Check if user is using features heavily
+        if (usage?.transactions_percentage > 70 || usage?.approaching_limits) {
+          offers.subscription = true;
+          console.log('💎 Subscription upgrade offer will be shown');
+        }
+      }
+      
+      // Check incomplete profile setup
+      const profileComplete = await checkProfileCompleteness(user);
+      if (!profileComplete.financial) {
+        offers.financial = true;
+        console.log('💰 Financial setup offer will be shown');
+      }
+      
+      if (!profileComplete.goals) {
+        offers.goals = true;
+        console.log('🎯 Goals setup offer will be shown');
+      }
+      
+      // Check security setup
+      const hasPinSetup = await SecurityService.isPinSetup(user.id);
+      if (!hasPinSetup) {
+        offers.security = true;
+        console.log('🔒 Security setup offer will be shown');
+      }
+      
+      setSetupOffers(offers);
+      
+      // Schedule offers to show after successful authentication
+      scheduleSetupOffers(offers);
+      
     } catch (error) {
-      return false;
+      console.error('Error checking setup offers:', error);
     }
   };
 
-  const handlePhoneSignIn = async (phone) => {
-    try {
-      const result = await ApiService.requestPhoneSignIn(phone, '+996');
-      
-      if (result.success) {
-        navigateAuth('verify', { phone, isSignIn: true });
-        
+  // Schedule when to show setup offers (NEW)
+  const scheduleSetupOffers = (offers) => {
+    // Priority order for showing offers
+    if (offers.security) {
+      // Security is highest priority - show immediately after auth
+      setTimeout(() => {
         Alert.alert(
-          'Welcome Back!',
-          'We sent a verification code to your phone number.',
-          [{ text: 'OK' }]
+          'Enhance Your Security',
+          'Set up a PIN to secure your financial data',
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Set Up PIN', onPress: () => handleSecuritySetup() }
+          ]
         );
+      }, 2000);
+    } else if (offers.biometric) {
+      // Biometric is second priority
+      setTimeout(() => setShowBiometricOffer(true), 1500);
+    } else if (offers.subscription && offers.financial) {
+      // Show subscription upgrade if approaching limits
+      setTimeout(() => setShowPlanUpgradeOffer(true), 3000);
+    } else if (offers.financial || offers.goals) {
+      // Show incomplete setup reminder
+      setTimeout(() => setShowIncompleteSetupOffer(true), 3000);
+    }
+  };
+
+  // Check profile completeness (NEW)
+  const checkProfileCompleteness = async (user) => {
+    try {
+      const financialData = await AsyncStorage.getItem(`financial_data_${user.id}`);
+      const goalsData = await AsyncStorage.getItem(`goals_data_${user.id}`);
+      
+      return {
+        financial: financialData !== null,
+        goals: goalsData !== null,
+        profile: user.firstName && user.lastName && user.email
+      };
+    } catch (error) {
+      console.error('Error checking profile completeness:', error);
+      return { financial: true, goals: true, profile: true };
+    }
+  };
+
+  const checkAuthentication = async () => {
+    try {
+      const token = await ApiService.getToken();
+      
+      if (!token) {
+        console.log('No auth token found');
+        return { authenticated: false };
+      }
+      
+      const validationResult = await ApiService.validateToken();
+      
+      if (validationResult.success) {
+        console.log('✅ User authenticated:', validationResult.user);
+        return { 
+          authenticated: true, 
+          user: validationResult.user 
+        };
+      }
+      
+      return { authenticated: false };
+    } catch (error) {
+      console.error('Authentication check error:', error);
+      return { authenticated: false };
+    }
+  };
+
+  const checkPinRequirement = async (user) => {
+    try {
+      if (!user || !user.id) return false;
+      
+      SecurityService.setCurrentUser(user.id);
+      const hasPinSetup = await SecurityService.isPinSetup(user.id);
+      
+      console.log('PIN setup status for user', user.id, ':', hasPinSetup);
+      return hasPinSetup;
+    } catch (error) {
+      console.error('PIN requirement check error:', error);
+      return false;
+    }
+  };
+
+  const handleOnboardingComplete = async () => {
+    await AsyncStorage.setItem('hasLaunched', 'true');
+    setIsFirstLaunch(false);
+  };
+
+  const navigateAuth = (screen, data = {}) => {
+    console.log('Navigating to:', screen, 'with data:', data);
+    setCurrentScreen(screen);
+    setAuthData({ ...authData, ...data });
+  };
+
+  const handleAuthMethod = (method, data = {}) => {
+    console.log('Auth method selected:', method);
+    
+    switch (method) {
+      case 'phone':
+        navigateAuth('phone', data);
+        break;
+      case 'email':
+        navigateAuth('email', data);
+        break;
+      case 'google':
+        handleGoogleAuth(data);
+        break;
+      case 'apple':
+        handleAppleAuth(data);
+        break;
+      case 'signin':
+        navigateAuth('signin-form', data);
+        break;
+      default:
+        console.warn('Unknown auth method:', method);
+    }
+  };
+
+  const handleGoogleAuth = async (googleData) => {
+    try {
+      if (googleData.isNewUser) {
+        navigateAuth('profile', { 
+          ...googleData, 
+          authMethod: 'google' 
+        });
       } else {
-        Alert.alert('Error', result.error);
+        const authResult = await ApiService.signInWithGoogle(googleData);
+        if (authResult.success) {
+          await completeAuth(authResult.user);
+        }
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to send verification code');
+      Alert.alert('Error', 'Google authentication failed');
+    }
+  };
+
+  const handleAppleAuth = async (appleData) => {
+    try {
+      if (appleData.isNewUser) {
+        navigateAuth('profile', { 
+          ...appleData, 
+          authMethod: 'apple' 
+        });
+      } else {
+        const authResult = await ApiService.signInWithApple(appleData);
+        if (authResult.success) {
+          await completeAuth(authResult.user);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Apple authentication failed');
+    }
+  };
+
+  const handlePhoneRegistration = async (phone, countryCode) => {
+    try {
+      console.log('📱 Processing phone registration:', countryCode + phone);
+      
+      const checkResult = await ApiService.checkUserExists(null, phone);
+      
+      if (checkResult.exists) {
+        Alert.alert(
+          'Account Exists',
+          'An account with this phone number already exists. Would you like to sign in instead?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Sign In', 
+              onPress: () => {
+                navigateAuth('signin-form', { phone, countryCode });
+              }
+            }
+          ]
+        );
+        return;
+      }
+      
+      navigateAuth('verify', { phone, countryCode, isSignIn: false });
+    } catch (error) {
+      console.error('Phone registration error:', error);
+      Alert.alert('Error', 'Failed to process phone number. Please try again.');
+    }
+  };
+
+  const handleEmailRegistration = async (email, password) => {
+    try {
+      console.log('📧 Processing email registration:', email);
+      
+      const checkResult = await ApiService.checkUserExists(email, null);
+      
+      if (checkResult.exists) {
+        Alert.alert(
+          'Account Exists',
+          'An account with this email already exists. Would you like to sign in instead?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Sign In', 
+              onPress: () => {
+                navigateAuth('signin-form', { email });
+              }
+            }
+          ]
+        );
+        return;
+      }
+      
+      navigateAuth('profile', { 
+        email, 
+        password, 
+        authMethod: 'email' 
+      });
+    } catch (error) {
+      console.error('Email registration error:', error);
+      Alert.alert('Error', 'Failed to process email. Please try again.');
+    }
+  };
+
+  const handleCodeVerification = async (code) => {
+    try {
+      console.log('🔓 Verifying code...');
+      
+      if (authData.isSignIn) {
+        const result = await ApiService.verifyPhoneSignIn(
+          authData.phone,
+          authData.countryCode,
+          code
+        );
+        
+        if (result.success) {
+          await completeAuth(result.user);
+        } else {
+          throw new Error(result.error);
+        }
+      } else {
+        navigateAuth('profile', { verificationCode: code });
+      }
+    } catch (error) {
+      console.error('Code verification error:', error);
+      throw error;
     }
   };
 
   const handleEmailSignIn = async (email, password) => {
     try {
+      console.log('📧 Processing email sign-in for:', email);
+      
       const result = await ApiService.signInWithEmail(email, password);
       
       if (result.success) {
-        setUser(result.user);
-        setIsAuthenticated(true);
-        
-        // Set the user ID in SecurityService
-        SecurityService.setCurrentUser(result.user.id);
-        
-        // Check security setup after successful sign-in
-        await checkSecuritySetup(result.user.id);
-        
-        Alert.alert('Welcome Back!', 'Successfully signed in to your account.');
+        await completeAuth(result.user);
       } else {
-        Alert.alert('Sign In Failed', result.error);
+        Alert.alert('Sign In Failed', result.error || 'Invalid email or password');
       }
     } catch (error) {
-      Alert.alert('Error', 'Sign in failed. Please try again.');
+      console.error('Email sign-in error:', error);
+      Alert.alert('Error', 'Failed to sign in. Please try again.');
     }
   };
 
-  // Navigate between auth steps and collect data
-  const navigateAuth = (step, data = {}) => {
-    setAuthData(prev => {
-      const updated = { ...prev, ...data };
-      return updated;
-    });
-    setCurrentAuthView(step);
-  };
-
-  // Handle different auth methods with early checks
-  const handleAuthMethod = async (method, data = {}) => {
-    switch (method) {
-      case 'email':
-        navigateAuth('email', { authMethod: 'email', isNewUser: true, ...data });
-        break;
-        
-      case 'phone':
-        navigateAuth('phone', { authMethod: 'phone', isNewUser: true, ...data });
-        break;
-        
-      case 'google':
-        handleGoogleAuth(data);
-        break;
-        
-      case 'apple':
-        handleAppleAuth(data);
-        break;
-        
-      case 'signin':
-        navigateAuth('signin-form', { authMethod: 'signin', isNewUser: false, ...data });
-        break;
-        
-      default:
-        navigateAuth('welcome');
-    }
-  };
-
-  // Email registration with early check
-  const handleEmailRegistration = async (email, password) => {
+  const handlePhoneSignIn = async (phone, countryCode) => {
     try {
-      const userExists = await checkUserExistsEarly(email, null);
+      console.log('📱 Processing phone sign-in for:', countryCode + phone);
       
-      if (userExists) {
-        return;
+      const result = await ApiService.requestPhoneSignIn(phone, countryCode);
+      
+      if (result.success) {
+        navigateAuth('verify', { 
+          phone, 
+          countryCode, 
+          isSignIn: true 
+        });
+      } else {
+        Alert.alert('Error', result.error || 'Failed to send verification code');
       }
-      
-      navigateAuth('profile', {
-        email,
-        password,
-        authMethod: 'email',
-        isNewUser: true
-      });
-      
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      console.error('Phone sign-in error:', error);
+      Alert.alert('Error', 'Failed to process sign-in. Please try again.');
     }
   };
 
-  // Phone registration with early check
-  const handlePhoneRegistration = async (phone, countryCode) => {
+  const completeAuth = async (finalData = {}) => {
     try {
-      const cleanPhone = phone.replace(/\s/g, '');
+      console.log('🎉 Completing authentication...');
       
-      const userExists = await checkUserExistsEarly(null, cleanPhone);
+      const fullUserData = {
+        ...authData,
+        ...finalData,
+        id: finalData.id || authData.id || Date.now().toString(),
+        createdAt: new Date().toISOString()
+      };
       
-      if (userExists) {
-        return;
-      }
-      
-      navigateAuth('verify', {
-        phone,
-        countryCode,
-        authMethod: 'phone',
-        isNewUser: true
-      });
-      
-    } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
-    }
-  };
-
-  // Google/Apple auth handlers (not implemented)
-  const handleGoogleAuth = async (googleData) => {
-    Alert.alert(
-      'Google Sign-In',
-      'Google authentication is not implemented yet. Please use email or phone registration.',
-      [{ text: 'OK' }]
-    );
-  };
-
-  const handleAppleAuth = async (appleData) => {
-    Alert.alert(
-      'Apple Sign-In',
-      'Apple authentication is not implemented yet. Please use email or phone registration.',
-      [{ text: 'OK' }]
-    );
-  };
-
-  // Handle verification for both registration and sign-in
-  const handleCodeVerification = async (code) => {
-    try {
-      if (authData.isSignIn) {
-        // This is a sign-in verification
-        const cleanPhone = authData.phone.replace(/\s/g, '');
-        const result = await ApiService.verifyPhoneSignIn(
-          cleanPhone, 
-          authData.countryCode, 
-          code
-        );
+      // For new registrations
+      if (!authData.isSignIn && !finalData.isExistingUser) {
+        console.log('📝 Registering new user...');
+        
+        const registrationData = {
+          authMethod: authData.authMethod || 'phone',
+          phone: authData.phone,
+          countryCode: authData.countryCode,
+          email: authData.email || finalData.email,
+          password: authData.password,
+          firstName: authData.firstName || finalData.firstName,
+          lastName: authData.lastName || finalData.lastName,
+          profilePicture: authData.profilePicture,
+          verificationCode: authData.verificationCode,
+          selectedPlan: authData.selectedPlan || 'basic',
+          currency: authData.currency || finalData.currency || 'KGS',
+          monthlyIncome: finalData.monthlyIncome,
+          additionalIncome: finalData.additionalIncome,
+          financialGoals: finalData.financialGoals,
+          googleId: authData.googleId,
+          appleId: authData.appleId
+        };
+        
+        const result = await ApiService.registerUser(registrationData);
         
         if (result.success) {
-          setUser(result.user);
-          setIsAuthenticated(true);
-          
-          // Set the user ID in SecurityService
-          SecurityService.setCurrentUser(result.user.id);
-          
-          // Check security setup after successful sign-in
-          await checkSecuritySetup(result.user.id);
-          
-          Alert.alert('Welcome Back!', 'Successfully signed in with your phone number.');
+          fullUserData.id = result.user.id;
+          fullUserData.token = result.token;
         } else {
-          Alert.alert('Verification Failed', result.error);
+          throw new Error(result.error || 'Registration failed');
         }
-      } else {
-        // This is a registration verification - proceed to profile
-        navigateAuth('profile', { verificationCode: code });
+        
+        // Setup PIN for new users
+        setUserData(fullUserData);
+        SecurityService.setCurrentUser(fullUserData.id);
+        setCurrentScreen('pin-setup');
+        return;
       }
+      
+      // For existing users signing in
+      setUserData(fullUserData);
+      await AsyncStorage.setItem('userData', JSON.stringify(fullUserData));
+      
+      // Check setup offers for returning users
+      await checkSetupOffers(fullUserData);
+      
+      // Check if PIN is required
+      const pinRequired = await checkPinRequirement(fullUserData);
+      
+      if (pinRequired) {
+        SecurityService.setCurrentUser(fullUserData.id);
+        setRequiresPinAuth(true);
+      } else {
+        // Show biometric setup offer if available
+        if (setupOffers.biometric) {
+          setTimeout(() => setShowBiometricOffer(true), 1000);
+        }
+        setIsAuthenticated(true);
+      }
+      
+      console.log('✅ Authentication completed successfully');
     } catch (error) {
-      Alert.alert('Verification Error', error.message);
+      console.error('❌ Complete auth error:', error);
+      Alert.alert('Authentication Error', error.message || 'Failed to complete authentication');
     }
   };
 
-  // Complete authentication
-  const completeAuth = async (userData = null) => {
+  const handlePinSetupComplete = () => {
+    console.log('✅ PIN setup completed');
+    setShowBiometricOffer(true);
+  };
+
+  const handleBiometricSetupComplete = (enabled) => {
+    console.log('✅ Biometric setup completed:', enabled ? 'Enabled' : 'Skipped');
+    setShowBiometricOffer(false);
+    setIsAuthenticated(true);
+    
+    // Check for other setup offers
+    if (setupOffers.subscription) {
+      setTimeout(() => setShowPlanUpgradeOffer(true), 2000);
+    } else if (setupOffers.financial || setupOffers.goals) {
+      setTimeout(() => setShowIncompleteSetupOffer(true), 2000);
+    }
+  };
+
+  const handlePinAuthSuccess = () => {
+    console.log('✅ PIN authentication successful');
+    setRequiresPinAuth(false);
+    setIsAuthenticated(true);
+    
+    // Show setup offers after successful PIN auth
+    if (setupOffers.biometric) {
+      setTimeout(() => setShowBiometricOffer(true), 1000);
+    } else if (setupOffers.subscription) {
+      setTimeout(() => setShowPlanUpgradeOffer(true), 2000);
+    }
+  };
+
+  const handleSignOut = async () => {
     try {
-      if (userData && !authData.isNewUser) {
-        // Existing user signing in
-        setUser(userData);
-        setIsAuthenticated(true);
-        
-        // Set the user ID in SecurityService
-        SecurityService.setCurrentUser(userData.id);
-        
-        // Check security setup for existing users
-        await checkSecuritySetup(userData.id);
-        return;
-      }
-
-      // New user registration
+      await ApiService.signOut();
+      await AsyncStorage.removeItem('userData');
       
-      // Validate required data
-      if (!authData.firstName || !authData.lastName) {
-        Alert.alert('Missing Information', 'Please complete your profile first.');
-        return;
-      }
-
-      if (authData.authMethod === 'email' && !authData.password) {
-        Alert.alert('Missing Information', 'Password is required for email registration.');
-        return;
-      }
-
-      setIsLoading(true);
+      setIsAuthenticated(false);
+      setRequiresPinAuth(false);
+      setUserData(null);
+      setAuthData({});
+      setCurrentScreen('welcome');
+      setSetupOffers({
+        biometric: false,
+        subscription: false,
+        financial: false,
+        goals: false,
+        security: false
+      });
       
-      const response = await ApiService.registerUser(authData);
-      
-      if (response && response.success) {
-        setUser(response.user);
-        setIsAuthenticated(true);
-        
-        // Set the user ID in SecurityService for new users
-        SecurityService.setCurrentUser(response.user.id);
-        
-        // NEW USERS need PIN setup - set the correct flags
-        setPinSetupRequired(true);
-        setPinAuthRequired(false);
-        setSecuritySetupComplete(false);
-        
-        Alert.alert(
-          'Welcome to Akchabar!', 
-          `Your ${authData.authMethod} account has been created successfully! Next, let's secure your account with a PIN.`
-        );
-      } else {
-        const errorMessage = response?.error || 'Unknown error occurred during registration';
-        
-        if (response?.shouldSignIn) {
-          Alert.alert(
-            'Account Already Exists',
-            'An account with this information already exists. Please sign in instead.',
-            [
-              { text: 'OK', onPress: () => navigateAuth('signin-form') }
-            ]
-          );
-        } else {
-          Alert.alert('Registration Failed', errorMessage);
-        }
-      }
-      
+      console.log('✅ User signed out successfully');
     } catch (error) {
-      Alert.alert('Registration Error', `Failed to create account: ${error.message}`);
-    } finally {
-      setIsLoading(false);
+      console.error('Sign out error:', error);
     }
   };
 
-  const completeOnboarding = () => {
-    setHasSeenOnboarding(true);
+  // Handle security setup (NEW)
+  const handleSecuritySetup = () => {
+    setCurrentScreen('pin-setup');
   };
 
-  const signOut = async () => {
-    await ApiService.signOut();
-    setUser(null);
-    setIsAuthenticated(false);
-    setCurrentAuthView('welcome');
-    setPinSetupRequired(false);
-    setPinAuthRequired(false);
-    setSecuritySetupComplete(false);
-    
-    // Clear the current user from SecurityService
-    SecurityService.setCurrentUser(null);
-    
-    // Reset ALL auth data
-    setAuthData({
-      authMethod: '',
-      isNewUser: false,
-      email: '',
-      password: '',
-      phone: '',
-      countryCode: '+996',
-      verificationCode: '',
-      googleId: '',
-      appleId: '',
-      socialToken: '',
-      firstName: '',
-      lastName: '',
-      profilePicture: null,
-      monthlyIncome: '',
-      currency: 'KGS',
-      selectedPlan: 'basic',
-      bio: '',
-      dateOfBirth: '',
-      occupation: ''
-    });
-  };
-
-  // Props for auth components
-  const authProps = {
-    authData,
-    language,
-    setLanguage,
-    navigateAuth,
-    completeAuth,
-    handleAuthMethod,
-    handleEmailRegistration,
-    handlePhoneRegistration,
-    handleCodeVerification,
-    handleEmailSignIn,
-    handlePhoneSignIn,
-  };
-
-  // FIXED: Loading screen with proper StatusBar
-  if (isLoading) {
+  // Render loading screen
+  if (loading) {
     return (
-      <SafeAreaProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#05212A" />
-        <SafeAreaView style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: '#05212A'
-        }}>
-          <ActivityIndicator size="large" color="#98DDA6" />
-          <Text style={{
-            marginTop: 16,
-            fontSize: 16,
-            color: '#9ca3af',
-            textAlign: 'center'
-          }}>
-            {isAuthenticated ? 'Setting up your account...' : 'Loading Akchabar...'}
-          </Text>
-        </SafeAreaView>
-      </SafeAreaProvider>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#05212a' }}>
+        <ActivityIndicator size="large" color="#98DDA6" />
+        <Text style={{ color: '#98DDA6', marginTop: 16 }}>Loading Akchabar...</Text>
+      </View>
     );
   }
 
-  // Render screens with security flow
-  const renderScreen = () => {
-    // FIXED: Proper StatusBar for all screens
-    const statusBarProps = {
-      barStyle: "light-content",
-      backgroundColor: "#05212A"
-    };
+  // Show onboarding for first launch
+  if (isFirstLaunch) {
+    return (
+      <OnboardingFlow
+        language={language}
+        setLanguage={setLanguage}
+        onComplete={handleOnboardingComplete}
+      />
+    );
+  }
 
-    if (!hasSeenOnboarding) {
-      return (
-        <>
-          <StatusBar {...statusBarProps} />
-          <OnboardingFlow 
-            language={language} 
-            setLanguage={setLanguage} 
-            onComplete={completeOnboarding}
-          />
-        </>
-      );
-    }
+  // Show PIN authentication if required
+  if (requiresPinAuth && userData) {
+    return (
+      <PinEntry
+        language={language}
+        onSuccess={handlePinAuthSuccess}
+        onCancel={handleSignOut}
+        user={userData}
+      />
+    );
+  }
 
-    // If user is authenticated but needs PIN setup (NEW USERS)
-    if (isAuthenticated && user && pinSetupRequired && !pinAuthRequired) {
-      return (
-        <>
-          <StatusBar {...statusBarProps} />
-          <PinSetup
-            language={language}
-            user={user}
-            onComplete={handlePinSetupComplete}
-          />
-        </>
-      );
-    }
+  // Show biometric setup offer for returning users
+  if (showBiometricOffer && userData) {
+    return (
+      <BiometricSetupOffer
+        visible={showBiometricOffer}
+        onComplete={handleBiometricSetupComplete}
+        onSkip={() => handleBiometricSetupComplete(false)}
+        user={userData}
+        language={language}
+      />
+    );
+  }
 
-    // If user is authenticated but needs PIN authentication (EXISTING USERS)
-    if (isAuthenticated && user && pinAuthRequired && !pinSetupRequired) {
-      return (
-        <>
-          <StatusBar {...statusBarProps} />
-          <PinEntry
-            language={language}
-            user={user}
-            onSuccess={handlePinAuthSuccess}
-            onCancel={signOut}
-          />
-        </>
-      );
-    }
-
-    // If user is fully authenticated and security setup is complete
-    if (isAuthenticated && user && securitySetupComplete && !pinSetupRequired && !pinAuthRequired) {
-      return (
-        <>
-          <StatusBar {...statusBarProps} />
-          <MainApp 
-            authData={user} 
-            language={language} 
-            onSignOut={signOut}
-          />
-        </>
-      );
-    }
-
-    // Authentication flow (not authenticated yet)
-    const authScreens = {
-      'welcome': <AuthWelcome {...authProps} />,
-      'signin-form': <SignInForm {...authProps} />,
-      'email': <EmailRegistration {...authProps} />,
-      'phone': <PhoneEntry {...authProps} />,
-      'verify': <CodeVerification {...authProps} />,
-      'profile': <ProfileSetup {...authProps} />,
-      'subscription': <SubscriptionPlans {...authProps} />,
-      'financial': <FinancialOnboarding {...authProps} />
-    };
-
+  // Show authenticated app
+  if (isAuthenticated && userData) {
     return (
       <>
-        <StatusBar {...statusBarProps} />
-        {authScreens[currentAuthView] || <AuthWelcome {...authProps} />}
+        <MainApp
+          authData={userData}
+          language={language}
+          onSignOut={handleSignOut}
+        />
+        
+        {/* Plan Upgrade Offer Modal (NEW) */}
+        {showPlanUpgradeOffer && (
+          <PlanUpgradeOffer
+            visible={showPlanUpgradeOffer}
+            onClose={() => setShowPlanUpgradeOffer(false)}
+            onUpgrade={() => {
+              setShowPlanUpgradeOffer(false);
+              // Navigate to subscription management
+            }}
+            language={language}
+          />
+        )}
+        
+        {/* Incomplete Setup Offer Modal (NEW) */}
+        {showIncompleteSetupOffer && (
+          <IncompleteSetupOffer
+            visible={showIncompleteSetupOffer}
+            onClose={() => setShowIncompleteSetupOffer(false)}
+            onContinueSetup={(type) => {
+              setShowIncompleteSetupOffer(false);
+              // Navigate to appropriate setup screen
+            }}
+            setupOffers={setupOffers}
+            language={language}
+          />
+        )}
       </>
     );
-  };
+  }
 
+  // Show auth flow screens
   return (
-    <SafeAreaProvider>
-      <View style={{ flex: 1, backgroundColor: '#05212A' }}>
-        {renderScreen()}
-      </View>
-    </SafeAreaProvider>
+    <View style={{ flex: 1 }}>
+      {currentScreen === 'welcome' && (
+        <AuthWelcome
+          language={language}
+          setLanguage={setLanguage}
+          handleAuthMethod={handleAuthMethod}
+          navigateAuth={navigateAuth}
+        />
+      )}
+      
+      {currentScreen === 'phone' && (
+        <PhoneEntry
+          authData={authData}
+          language={language}
+          setLanguage={setLanguage}
+          navigateAuth={navigateAuth}
+          handlePhoneRegistration={handlePhoneRegistration}
+        />
+      )}
+      
+      {currentScreen === 'email' && (
+        <EmailRegistration
+          language={language}
+          setLanguage={setLanguage}
+          navigateAuth={navigateAuth}
+          handleEmailRegistration={handleEmailRegistration}
+        />
+      )}
+      
+      {currentScreen === 'verify' && (
+        <CodeVerification
+          authData={authData}
+          language={language}
+          setLanguage={setLanguage}
+          navigateAuth={navigateAuth}
+          handleCodeVerification={handleCodeVerification}
+        />
+      )}
+      
+      {currentScreen === 'profile' && (
+        <ProfileSetup
+          authData={authData}
+          language={language}
+          setLanguage={setLanguage}
+          navigateAuth={navigateAuth}
+        />
+      )}
+      
+      {currentScreen === 'subscription' && (
+        <SubscriptionPlans
+          authData={authData}
+          language={language}
+          setLanguage={setLanguage}
+          navigateAuth={navigateAuth}
+        />
+      )}
+      
+      {currentScreen === 'financial' && (
+        <FinancialOnboarding
+          authData={authData}
+          language={language}
+          setLanguage={setLanguage}
+          navigateAuth={navigateAuth}
+          completeAuth={completeAuth}
+        />
+      )}
+      
+      {currentScreen === 'goals' && (
+        <GoalsSetup
+          authData={authData}
+          language={language}
+          setLanguage={setLanguage}
+          navigateAuth={navigateAuth}
+          completeAuth={completeAuth}
+        />
+      )}
+      
+      {currentScreen === 'signin-form' && (
+        <SignInForm
+          language={language}
+          setLanguage={setLanguage}
+          navigateAuth={navigateAuth}
+          completeAuth={completeAuth}
+          authData={authData}
+          handleEmailSignIn={handleEmailSignIn}
+          handlePhoneSignIn={handlePhoneSignIn}
+        />
+      )}
+      
+      {currentScreen === 'pin-setup' && userData && (
+        <PinSetup
+          language={language}
+          onComplete={handlePinSetupComplete}
+          user={userData}
+        />
+      )}
+    </View>
   );
 }
+
+// Additional components for setup offers (NEW)
+
+// Plan Upgrade Offer Component
+const PlanUpgradeOffer = ({ visible, onClose, onUpgrade, language }) => {
+  if (!visible) return null;
+  
+  return (
+    <View style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center'
+    }}>
+      {/* Implementation in separate file */}
+    </View>
+  );
+};
+
+// Incomplete Setup Offer Component  
+const IncompleteSetupOffer = ({ visible, onClose, onContinueSetup, setupOffers, language }) => {
+  if (!visible) return null;
+  
+  return (
+    <View style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center'
+    }}>
+      {/* Implementation in separate file */}
+    </View>
+  );
+};
