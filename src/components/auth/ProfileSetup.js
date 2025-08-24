@@ -109,7 +109,7 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
           globalStyles.scrollContent, 
           { 
             paddingHorizontal: width * 0.05,
-            paddingTop: 40
+            paddingTop: 100
           }
         ]}
         extraScrollHeight={100}
@@ -119,7 +119,7 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
           style={globalStyles.backButton}
           onPress={() => navigateAuth(authData.phone ? 'verify' : 'email')}
         >
-          <Ionicons name="arrow-back" size={22} color="#0f172a" />
+          <Ionicons name="arrow-back" size={22} color="white" />
         </TouchableOpacity>
         
         {/* Consistent title sizing */}
@@ -138,7 +138,7 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
                 <Image source={{ uri: profilePic }} style={globalStyles.profilePicPreview} />
               ) : (
                 <View style={globalStyles.profilePicPlaceholder}>
-                  <Ionicons name="person" size={32} color="#6b7280" />
+                  <Ionicons name="person" size={32} color="white" />
                 </View>
               )}
               <TouchableOpacity 
@@ -160,6 +160,7 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
               value={firstName}
               onChangeText={setFirstName}
               placeholder="John"
+              placeholderTextColor="#69696988"
               autoFocus
               returnKeyType="next"
             />
@@ -172,6 +173,7 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
               value={lastName}
               onChangeText={setLastName}
               placeholder="Doe"
+              placeholderTextColor="#69696988"
               returnKeyType="next"
             />
           </View>
@@ -183,6 +185,7 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
               value={email}
               onChangeText={setEmail}
               placeholder="john@example.com"
+              placeholderTextColor="#69696988"
               keyboardType="email-address"
               autoCapitalize="none"
               returnKeyType="done"

@@ -230,7 +230,7 @@ export const globalStyles = StyleSheet.create({
     zIndex: 1000,
     backgroundColor: 'rgba(152, 221, 166, 0.1)',
     borderRadius: 12,
-    padding: 12,
+    padding: 1,
     borderWidth: 1,
     borderColor: colors.border,
     minWidth: 44,

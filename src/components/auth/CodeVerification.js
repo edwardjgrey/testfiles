@@ -103,10 +103,10 @@ const CodeVerification = ({ authData, language, setLanguage, navigateAuth, handl
           style={globalStyles.backButton}
           onPress={handleGoBack}
         >
-          <Ionicons name="arrow-back" size={22} color="#0f172a" />
+          <Ionicons name="arrow-back" size={22} color="white" />
         </TouchableOpacity>
         
-        <Text style={[globalStyles.authTitleLeft, { color: '#0f172a' }]}>
+        <Text style={[globalStyles.authTitleLeft, { color: 'white' }]}>
           {isSignIn ? 
             (language === 'ru' ? 'Подтвердите вход' : 
              language === 'ky' ? 'Кирүүнү ырастаңыз' : 

@@ -68,10 +68,10 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
           style={globalStyles.backButton}
           onPress={() => navigateAuth('welcome')}
         >
-          <Ionicons name="arrow-back" size={22} color="#0f172a" />
+          <Ionicons name="arrow-back" size={22} color="white" />
         </TouchableOpacity>
         
-        <Text style={[globalStyles.authTitleLeft, { color: '#0f172a' }]}>
+        <Text style={[globalStyles.authTitleLeft, { color: 'white' }]}>
           {t.enterPhone}
         </Text>
         <Text style={[globalStyles.authSubtitleLeft, { color: '#6b7280' }]}>

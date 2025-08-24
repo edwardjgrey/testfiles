@@ -1,4 +1,4 @@
-// src/components/auth/FinancialOnboarding.js - ENHANCED VERSION with Additional Income & Statement Upload
+// src/components/auth/FinancialOnboarding.js - FIXED VERSION without expo-document-picker
 import React, { useState } from 'react';
 import {
   View,
@@ -14,9 +14,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
 import { globalStyles } from '../../styles/globalStyles';
-import { translations, additionalIncomeTypes, supportedFileTypes, fileTypeLabels } from '../../utils/translations';
+import { translations, additionalIncomeTypes } from '../../utils/translations';
 import LanguageSelector from '../common/LanguageSelector';
 
 const { width } = Dimensions.get('window');
@@ -35,9 +34,8 @@ const FinancialOnboarding = ({ authData, language, setLanguage, navigateAuth, co
   const [incomeAmount, setIncomeAmount] = useState('');
   const [incomeDescription, setIncomeDescription] = useState('');
   
-  // Statement upload state
-  const [uploadedStatement, setUploadedStatement] = useState(null);
-  const [uploadLoading, setUploadLoading] = useState(false);
+  // Statement upload state - REMOVED DOCUMENT PICKER DEPENDENCY
+  const [statementNote, setStatementNote] = useState('');
   
   const [loading, setLoading] = useState(false);
 
@@ -75,55 +73,38 @@ const FinancialOnboarding = ({ authData, language, setLanguage, navigateAuth, co
     return primary + additional;
   };
 
-  // Handle statement upload
-  const handleStatementUpload = async () => {
-    try {
-      setUploadLoading(true);
-      
-      const result = await DocumentPicker.getDocumentAsync({
-        type: supportedFileTypes,
-        multiple: false,
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        
-        // Validate file size (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
-          Alert.alert('Error', 'File size must be less than 10MB');
-          return;
-        }
-
-        setUploadedStatement({
-          name: file.name,
-          size: file.size,
-          type: file.mimeType,
-          uri: file.uri
-        });
-
-        Alert.alert('Success', 'Statement uploaded successfully! We\'ll analyze it to help set up your categories.');
-      }
-    } catch (error) {
-      console.error('Document picker error:', error);
-      Alert.alert('Error', 'Failed to upload statement. Please try again.');
-    } finally {
-      setUploadLoading(false);
-    }
-  };
-
-  // Remove uploaded statement
-  const removeStatement = () => {
-    setUploadedStatement(null);
-  };
-
-  // Format file size
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  // REMOVED: Document upload functionality - replaced with simple note
+  const handleStatementNote = () => {
+    Alert.alert(
+      'Statement Information',
+      'You can add details about your bank statement or financial situation here. This helps us provide better recommendations.',
+      [
+        {
+          text: 'Add Note',
+          onPress: () => {
+            Alert.prompt(
+              'Statement Note',
+              'Add any relevant financial information:',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                  text: 'Save', 
+                  onPress: (text) => {
+                    if (text) {
+                      setStatementNote(text);
+                      Alert.alert('Saved', 'Your note has been saved successfully!');
+                    }
+                  }
+                }
+              ],
+              'plain-text',
+              statementNote
+            );
+          }
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
   };
 
   const handleFinish = async () => {
@@ -145,7 +126,7 @@ const FinancialOnboarding = ({ authData, language, setLanguage, navigateAuth, co
         additionalIncome: additionalIncome,
         totalIncome: getTotalIncome(),
         currency: currency,
-        uploadedStatement: uploadedStatement
+        statementNote: statementNote // Simple note instead of file upload
       };
       
       // Complete the auth process with enhanced financial data
@@ -166,7 +147,7 @@ const FinancialOnboarding = ({ authData, language, setLanguage, navigateAuth, co
         additionalIncome: [],
         totalIncome: 0,
         currency: 'KGS',
-        uploadedStatement: null
+        statementNote: null
       });
     } catch (error) {
       console.error('Skip financial onboarding error:', error);
@@ -261,7 +242,7 @@ const FinancialOnboarding = ({ authData, language, setLanguage, navigateAuth, co
           globalStyles.scrollContent, 
           { 
             paddingHorizontal: width * 0.05,
-            paddingTop: 80
+            paddingTop: 100
           }
         ]}
         showsVerticalScrollIndicator={false}
@@ -271,11 +252,11 @@ const FinancialOnboarding = ({ authData, language, setLanguage, navigateAuth, co
           style={globalStyles.backButton}
           onPress={() => navigateAuth('subscription')}
         >
-          <Ionicons name="arrow-back" size={22} color="#0f172a" />
+          <Ionicons name="arrow-back" size={22} color="white" />
         </TouchableOpacity>
         
         {/* Title */}
-        <Text style={[globalStyles.authTitleLeft, { color: '#0f172a' }]}>
+        <Text style={[globalStyles.authTitleLeft, { color: 'white' }]}>
           {t.financialSetup || 'Financial Setup'}
         </Text>
         <Text style={[globalStyles.authSubtitleLeft, { color: '#6b7280' }]}>
@@ -415,55 +396,44 @@ const FinancialOnboarding = ({ authData, language, setLanguage, navigateAuth, co
             </View>
           )}
 
-          {/* Statement Upload Section */}
+          {/* Statement Note Section - SIMPLIFIED WITHOUT FILE UPLOAD */}
           <View style={globalStyles.formGroup}>
             <Text style={[globalStyles.formLabel, { color: '#6b7280' }]}>
-              {t.statementUpload || 'Upload Bank Statement (Optional)'}
+              {t.statementNote || 'Financial Information (Optional)'}
             </Text>
             <Text style={styles.helpText}>
-              {t.statementUploadHint || 'Upload your latest bank statement to get started faster'}
+              {t.statementNoteHint || 'Add any relevant financial information to help us provide better recommendations'}
             </Text>
 
-            {!uploadedStatement ? (
+            {!statementNote ? (
               <TouchableOpacity
-                style={styles.uploadButton}
-                onPress={handleStatementUpload}
-                disabled={uploadLoading}
+                style={styles.addNoteButton}
+                onPress={handleStatementNote}
               >
-                {uploadLoading ? (
-                  <ActivityIndicator size="small" color="#0f172a" />
-                ) : (
-                  <>
-                    <Ionicons name="document-text-outline" size={20} color="#0f172a" />
-                    <Text style={styles.uploadButtonText}>
-                      {t.selectFile || 'Select File'}
-                    </Text>
-                  </>
-                )}
+                <Ionicons name="document-text-outline" size={20} color="#0f172a" />
+                <Text style={styles.addNoteButtonText}>
+                  {t.addNote || 'Add Financial Note'}
+                </Text>
               </TouchableOpacity>
             ) : (
-              <View style={styles.uploadedFileCard}>
-                <View style={styles.uploadedFileInfo}>
+              <View style={styles.noteCard}>
+                <View style={styles.noteInfo}>
                   <Ionicons name="document-text" size={20} color="#16a34a" />
-                  <View style={styles.uploadedFileDetails}>
-                    <Text style={styles.uploadedFileName}>{uploadedStatement.name}</Text>
-                    <Text style={styles.uploadedFileSize}>
-                      {formatFileSize(uploadedStatement.size)}
+                  <View style={styles.noteDetails}>
+                    <Text style={styles.noteTitle}>Financial Information Added</Text>
+                    <Text style={styles.notePreview}>
+                      {statementNote.substring(0, 50)}...
                     </Text>
                   </View>
                 </View>
                 <TouchableOpacity
-                  style={styles.removeFileButton}
-                  onPress={removeStatement}
+                  style={styles.removeNoteButton}
+                  onPress={() => setStatementNote('')}
                 >
                   <Ionicons name="close" size={16} color="#ef4444" />
                 </TouchableOpacity>
               </View>
             )}
-
-            <Text style={styles.supportedFilesText}>
-              Supported: PDF, CSV, Excel, JPEG, PNG (max 10MB)
-            </Text>
           </View>
 
           {/* Privacy Notice */}
@@ -651,8 +621,8 @@ const styles = {
     color: '#15803d',
   },
 
-  // Upload Button
-  uploadButton: {
+  // Note Section - SIMPLIFIED
+  addNoteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -665,14 +635,14 @@ const styles = {
     gap: 8,
     marginBottom: 8,
   },
-  uploadButtonText: {
+  addNoteButtonText: {
     color: '#0f172a',
     fontSize: 14,
     fontWeight: '500',
   },
 
-  // Uploaded File
-  uploadedFileCard: {
+  // Note Card
+  noteCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0fdf4',
@@ -682,32 +652,27 @@ const styles = {
     borderColor: '#bbf7d0',
     marginBottom: 8,
   },
-  uploadedFileInfo: {
+  noteInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     gap: 10,
   },
-  uploadedFileDetails: {
+  noteDetails: {
     flex: 1,
   },
-  uploadedFileName: {
+  noteTitle: {
     fontSize: 14,
     fontWeight: '500',
     color: '#0f172a',
     marginBottom: 2,
   },
-  uploadedFileSize: {
+  notePreview: {
     fontSize: 12,
     color: '#6b7280',
   },
-  removeFileButton: {
+  removeNoteButton: {
     padding: 4,
-  },
-  supportedFilesText: {
-    fontSize: 11,
-    color: '#9ca3af',
-    textAlign: 'center',
   },
 
   // Privacy Notice
