@@ -116,15 +116,15 @@ export const globalStyles = StyleSheet.create({
   
   // Scroll Content
   scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.md,
-    paddingTop: Platform.OS === 'ios' ? 
-      (deviceTypes.isTablet ? 120 : 100) : 
-      (deviceTypes.isTablet ? 100 : 80),
-    paddingBottom: spacing.xl,
-    justifyContent: 'center',
-    minHeight: deviceTypes.isTablet ? height * 0.9 : height * 0.8,
-  },
+  flexGrow: 1,
+  paddingHorizontal: spacing.md,
+  paddingTop: Platform.OS === 'ios' ? 
+    (deviceTypes.isTablet ? 140 : 120) : // INCREASED from 120/100
+    (deviceTypes.isTablet ? 120 : 100), // INCREASED from 100/80
+  paddingBottom: spacing.xl,
+  justifyContent: 'flex-start', // Keep flex-start but with more top padding
+  minHeight: deviceTypes.isTablet ? height * 0.85 : height * 0.75, // REDUCED min height
+},
   
   mainContent: {
     padding: spacing.md,
@@ -132,22 +132,23 @@ export const globalStyles = StyleSheet.create({
   },
   
   // Auth Card
-  authCard: {
-    backgroundColor: colors.authCard,
-    borderRadius: deviceTypes.isTablet ? 24 : 16,
-    padding: spacing.lg,
-    marginVertical: spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-    width: responsive.containerWidth,
-    maxWidth: deviceTypes.isTablet ? 500 : 400,
-    alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
+authCard: {
+  backgroundColor: colors.authCard,
+  borderRadius: deviceTypes.isTablet ? 24 : 16,
+  padding: spacing.lg,
+  marginVertical: spacing.sm, // REDUCED from spacing.md
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 12,
+  elevation: 8,
+  width: responsive.containerWidth,
+  maxWidth: deviceTypes.isTablet ? 500 : 400,
+  alignSelf: 'center',
+  borderWidth: 1,
+  borderColor: colors.border,
+  marginTop: spacing.xs, // ADDED: Less top margin
+},
   
   signInCard: {
     alignItems: 'center',
@@ -184,14 +185,14 @@ export const globalStyles = StyleSheet.create({
     lineHeight: typography.display * 1.2,
   },
   
-  authTitleLeft: {
-    fontSize: typography.display,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
-    lineHeight: typography.display * 1.2,
-  },
+ authTitleLeft: {
+  fontSize: typography.display,
+  fontWeight: '800',
+  color: '#ffffff',
+  marginBottom: spacing.sm,
+  marginTop: spacing.sm, // REDUCED from spacing.md
+  lineHeight: typography.display * 1.2,
+},
   
   authSubtitle: {
     fontSize: typography.body,
@@ -266,36 +267,47 @@ export const globalStyles = StyleSheet.create({
   },
   
   pillTextPrimary: {
-    color: colors.background,
-    fontSize: typography.subtitle,
-    fontWeight: '700',
-  },
-  
-  pillTextSecondary: {
-    color: '#ffffff',
-    fontSize: typography.subtitle,
-    fontWeight: '700',
-    marginLeft: spacing.sm,
-  },
-  
-  pillTextGoogle: {
-    color: '#ffffff',
-    fontSize: typography.subtitle,
-    fontWeight: '700',
-  },
-  
-  pillTextApple: {
-    color: '#ffffff',
-    fontSize: typography.subtitle,
-    fontWeight: '700',
-  },
+  color: colors.background,
+  fontSize: typography.subtitle,
+  fontWeight: '700',
+  textAlign: 'center', // ADDED: Center align for better Russian text
+  letterSpacing: 0.3, // ADDED: Slight letter spacing for readability
+},
+
+pillTextSecondary: {
+  color: '#ffffff',
+  fontSize: typography.subtitle,
+  fontWeight: '700',
+  marginLeft: spacing.xs, // REDUCED from spacing.sm
+  textAlign: 'center', // ADDED: Center align
+  letterSpacing: 0.3, // ADDED: Better spacing
+},
+
+// 5. FIXED: Google/Apple button text - More icon spacing
+pillTextGoogle: {
+  color: '#ffffff',
+  fontSize: typography.subtitle,
+  fontWeight: '700',
+  marginLeft: spacing.sm, // INCREASED from default
+  textAlign: 'center',
+  letterSpacing: 0.3,
+},
+
+pillTextApple: {
+  color: '#ffffff',
+  fontSize: typography.subtitle,
+  fontWeight: '700',
+  marginLeft: spacing.sm, // INCREASED from default
+  textAlign: 'center',
+  letterSpacing: 0.3,
+},
   
   // Navigation Buttons
   backButton: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 
-      (deviceTypes.isTablet ? 80 : 60) : 
-      (deviceTypes.isTablet ? 60 : 40),
+      (deviceTypes.isTablet ? 60 : 50) : // MATCH language selector height
+      (deviceTypes.isTablet ? 50 : 40), // MATCH language selector height
     left: spacing.lg,
     zIndex: 1000,
     backgroundColor: 'rgba(152, 221, 166, 0.1)',
@@ -310,14 +322,14 @@ export const globalStyles = StyleSheet.create({
   },
   
   // Language Selector
-  languageContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 
-      (deviceTypes.isTablet ? 80 : 60) : 
-      (deviceTypes.isTablet ? 60 : 40),
-    right: spacing.lg,
-    zIndex: 1000,
-  },
+ languageContainer: {
+  position: 'absolute',
+  top: Platform.OS === 'ios' ? 
+    (deviceTypes.isTablet ? 60 : 50) : // DECREASED from 80/60
+    (deviceTypes.isTablet ? 50 : 40), // DECREASED from 60/40
+  right: spacing.lg,
+  zIndex: 1000,
+},
   
   languageButton: {
     backgroundColor: 'rgba(152, 221, 166, 0.1)',
