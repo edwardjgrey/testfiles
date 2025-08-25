@@ -1,4 +1,4 @@
-// src/components/auth/SignInForm.js - FIXED with country codes for SMS sign-in
+// src/components/auth/SignInForm.js - COMPLETE FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -25,12 +25,14 @@ import BiometricService from '../../services/biometricService';
 const { width } = Dimensions.get('window');
 
 const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authData, handleEmailSignIn, handlePhoneSignIn }) => {
-  const t = translations[language];
+  const t = translations[language] || translations.en || {};
   const [signInMethod, setSignInMethod] = useState('email');
   const [email, setEmail] = useState(authData?.email || '');
   const [phone, setPhone] = useState(authData?.phone || '');
-  const [countryCode, setCountryCode] = useState(authData?.countryCode || '+996'); // Added country code state
-  const [showCountries, setShowCountries] = useState(false); // Added country modal state
+  
+  // FIX: Ensure countryCode is never undefined
+  const [countryCode, setCountryCode] = useState(authData?.countryCode || '+996');
+  const [showCountries, setShowCountries] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -65,51 +67,64 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
       setBiometricSetup(biometricInfo.isSetup);
       setBiometricType(biometricInfo.typeName || '');
     } catch (error) {
-      // Biometric check failed - continue without it
+      console.log('Biometric check failed - continuing without biometric');
     }
   };
 
-      // Format phone number for display
-    const formatPhone = (text, selectedCountry) => {
-      const digits = text.replace(/\D/g, '');
-      
-      if (!selectedCountry) return digits;
-      
-      // Format based on country
-      switch (selectedCountry.code) {
-        case '+996': // Kyrgyzstan - 9 digits: XXX XXX XXX
-        case '+992': // Tajikistan - 9 digits
-          const kg = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})$/);
-          if (!kg) return digits;
-          return [kg[1], kg[2], kg[3]].filter(Boolean).join(' ');
-          
-        case '+44': // UK - 11 digits: XXXX XXX XXXX
-          const uk = digits.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
-          if (!uk) return digits;
-          return [uk[1], uk[2], uk[3]].filter(Boolean).join(' ');
-          
-        case '+1': // USA - 10 digits: (XXX) XXX-XXXX
-          const us = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
-          if (!us) return digits;
-          let formatted = '';
-          if (us[1]) formatted += `(${us[1]}`;
-          if (us[2]) formatted += `) ${us[2]}`;
-          if (us[3]) formatted += `-${us[3]}`;
-          return formatted;
-          
-        case '+7': // Russia/Kazakhstan - 10 digits: XXX XXX-XX-XX
-          const ru = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})$/);
-          if (!ru) return digits;
-          return [ru[1], ru[2], ru[3], ru[4]].filter(Boolean).join(' ');
-          
-        default:
-          // Generic format for other countries
-          const generic = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
-          if (!generic) return digits;
-          return [generic[1], generic[2], generic[3]].filter(Boolean).join(' ');
-      }
-    };
+  // FIX: Get selected country safely with fallback
+  const selectedCountry = countryCodes.find(c => c.code === countryCode) || countryCodes[0] || {
+    code: '+996',
+    country: 'Kyrgyzstan',
+    flag: '🇰🇬',
+    format: 'XXX XXX XXX',
+    length: 9
+  };
 
+  // FIX: Format phone number safely
+  const formatPhone = (text, selectedCountry) => {
+    const digits = text.replace(/\D/g, '');
+    
+    // FIX: Handle undefined selectedCountry
+    if (!selectedCountry || !selectedCountry.code) {
+      return digits;
+    }
+    
+    // Format based on country
+    switch (selectedCountry.code) {
+      case '+996': // Kyrgyzstan - 9 digits: XXX XXX XXX
+      case '+992': // Tajikistan - 9 digits
+        const kg = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})$/);
+        if (!kg) return digits;
+        return [kg[1], kg[2], kg[3]].filter(Boolean).join(' ');
+        
+      case '+44': // UK - 11 digits: XXXX XXX XXXX
+        const uk = digits.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
+        if (!uk) return digits;
+        return [uk[1], uk[2], uk[3]].filter(Boolean).join(' ');
+        
+      case '+1': // USA - 10 digits: (XXX) XXX-XXXX
+        const us = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+        if (!us) return digits;
+        let formatted = '';
+        if (us[1]) formatted += `(${us[1]}`;
+        if (us[2]) formatted += `) ${us[2]}`;
+        if (us[3]) formatted += `-${us[3]}`;
+        return formatted;
+        
+      case '+7': // Russia/Kazakhstan - 10 digits: XXX XXX-XX-XX
+        const ru = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})$/);
+        if (!ru) return digits;
+        return [ru[1], ru[2], ru[3], ru[4]].filter(Boolean).join(' ');
+        
+      default:
+        // Generic format for other countries
+        const generic = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+        if (!generic) return digits;
+        return [generic[1], generic[2], generic[3]].filter(Boolean).join(' ');
+    }
+  };
+
+  // FIX: Handle sign in with proper country code handling
   const handleSignIn = async () => {
     try {
       setLoading(true);
@@ -135,21 +150,25 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
           }
         }
       } else {
+        // PHONE SIGN IN - FIX THE COUNTRY CODE ISSUE
         if (!phone) {
           Alert.alert('Error', 'Please enter your phone number');
           return;
         }
         
-        // Clean phone number before processing
+        // FIX: Ensure countryCode is properly set
+        const finalCountryCode = countryCode || '+996';
         const cleanPhone = phone.replace(/\s/g, '');
         
+        console.log('📱 Processing phone sign-in for:', finalCountryCode + cleanPhone);
+        
         if (handlePhoneSignIn) {
-          await handlePhoneSignIn(cleanPhone);
+          await handlePhoneSignIn(cleanPhone, finalCountryCode);
         } else {
-          const result = await ApiService.requestPhoneSignIn(cleanPhone, countryCode);
+          const result = await ApiService.requestPhoneSignIn(cleanPhone, finalCountryCode);
           
           if (result.success) {
-            navigateAuth('verify', { phone: cleanPhone, countryCode, isSignIn: true });
+            navigateAuth('verify', { phone: cleanPhone, countryCode: finalCountryCode, isSignIn: true });
           } else {
             Alert.alert('Error', result.error);
           }
@@ -201,7 +220,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 Alert.alert('Success', `${biometricType} has been enabled for your account.`);
               }
             } catch (error) {
-              // Biometric setup failed - continue without it
+              console.log('Biometric setup failed');
             }
           }
         }
@@ -308,9 +327,6 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
     );
   };
 
-  // Get selected country data
-  const selectedCountry = countryCodes.find(c => c.code === countryCode) || countryCodes[0];
-
   const renderResetModal = () => (
     <Modal
       visible={showResetModal}
@@ -341,7 +357,9 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
             </Text>
             
             <View style={globalStyles.formGroup}>
-              <Text style={globalStyles.formLabel}>Email</Text>
+              <Text style={globalStyles.formLabel}>
+                Email
+              </Text>
               <TextInput
                 style={globalStyles.formInput}
                 value={resetEmail}
@@ -350,7 +368,6 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 placeholderTextColor="#9ca3af"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                
               />
             </View>
 
@@ -393,7 +410,6 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 placeholder="12345678"
                 placeholderTextColor="#9ca3af"
                 keyboardType="number-pad"
-                
               />
             </View>
 
@@ -431,7 +447,6 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 placeholder="••••••••"
                 placeholderTextColor="#9ca3af"
                 secureTextEntry
-                
               />
             </View>
 
@@ -495,10 +510,10 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
         </TouchableOpacity>
         
         <Text style={[globalStyles.authTitleLeft, { color: '#ffffff' }]}>
-          {t.signIn}
+          {t.signIn || 'Sign In'}
         </Text>
         <Text style={[globalStyles.authSubtitleLeft, { color: '#9ca3af' }]}>
-          {t.welcomeBackSub}
+          {t.welcomeBackSub || 'Welcome back to Akchabar'}
         </Text>
 
         {/* Biometric Sign In Button (if available and setup) */}
@@ -588,7 +603,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
             <>
               <View style={globalStyles.formGroup}>
                 <Text style={globalStyles.formLabel}>
-                  {t.email}
+                  {t.email || 'Email'}
                 </Text>
                 <TextInput
                   style={globalStyles.formInput}
@@ -604,7 +619,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
 
               <View style={globalStyles.formGroup}>
                 <Text style={globalStyles.formLabel}>
-                  {t.password}
+                  {t.password || 'Password'}
                 </Text>
                 <View style={{ position: 'relative' }}>
                   <TextInput
@@ -639,7 +654,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                 onPress={handleForgotPassword}
               >
                 <Text style={[globalStyles.linkText, { fontSize: 14, color: '#98DDA6' }]}>
-                  {t.forgotPassword}
+                  {t.forgotPassword || 'Forgot Password?'}
                 </Text>
               </TouchableOpacity>
             </>
@@ -647,34 +662,35 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
             <>
               <View style={globalStyles.formGroup}>
                 <Text style={globalStyles.formLabel}>
-                  {t.phoneNumber}
+                  {t.phoneNumber || 'Phone Number'}
                 </Text>
                 
-                {/* Phone input with country picker */}
+                {/* FIX: Phone input with proper country picker */}
                 <View style={globalStyles.phoneInputContainer}>
                   <TouchableOpacity
                     style={globalStyles.phoneCountry}
                     onPress={() => setShowCountries(!showCountries)}
                   >
-                    <Text style={globalStyles.flagText}>{selectedCountry?.flag}</Text>
-                    <Text style={globalStyles.countryCodeText}>{countryCode}</Text>
+                    <Text style={globalStyles.flagText}>{selectedCountry?.flag || '🇰🇬'}</Text>
+                    <Text style={globalStyles.countryCodeText}>{countryCode || '+996'}</Text>
                     <Ionicons name="chevron-down" size={14} color="#9ca3af" />
                   </TouchableOpacity>
                   
-                  // Update the onChangeText handler:
-<TextInput
-  style={globalStyles.phoneInput}
-  placeholder={selectedCountry?.format?.replace(/X/g, '0') || "555 123 456"}
-  placeholderTextColor="#9ca3af"
-  value={phone}
-  onChangeText={(text) => setPhone(formatPhone(text, selectedCountry))}
-  maxLength={selectedCountry?.length + 2 || 13} // +2 for spaces
-  keyboardType="phone-pad"
-/>
+                  <TextInput
+                    style={globalStyles.phoneInput}
+                    placeholder={selectedCountry?.format?.replace(/X/g, '0') || "555 123 456"}
+                    placeholderTextColor="#9ca3af"
+                    value={phone}
+                    onChangeText={(text) => setPhone(formatPhone(text, selectedCountry))}
+                    maxLength={selectedCountry?.length + 2 || 13} // +2 for spaces
+                    keyboardType="phone-pad"
+                    returnKeyType="done"
+                    onSubmitEditing={handleSignIn}
+                  />
                 </View>
                 
                 <Text style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
-                  {t.smsSignInHint}
+                  {t.smsSignInHint || 'We\'ll send you a verification code to sign in'}
                 </Text>
               </View>
 
@@ -697,6 +713,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                           key={index}
                           style={globalStyles.countryOption}
                           onPress={() => {
+                            console.log('🏳️ Country selected:', country.code, country.country);
                             setCountryCode(country.code);
                             setShowCountries(false);
                           }}
@@ -726,7 +743,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
               <ActivityIndicator size="small" color="white" />
             ) : (
               <Text style={globalStyles.pillTextPrimary}>
-                {t.signIn}
+                {t.signIn || 'Sign In'}
               </Text>
             )}
           </TouchableOpacity>
@@ -734,12 +751,12 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
           {/* Create Account Link */}
           <View style={{ marginTop: 20, alignItems: 'center' }}>
             <Text style={[globalStyles.alreadyAccountText, { color: '#9ca3af' }]}>
-              {t.dontHaveAccount}{' '}
+              {t.dontHaveAccount || "Don't have an account?"}{' '}
               <Text
                 style={[globalStyles.linkText, { color: '#98DDA6' }]}
                 onPress={() => navigateAuth('welcome')}
               >
-                {t.createAccount}
+                {t.createAccount || 'Create Account'}
               </Text>
             </Text>
           </View>

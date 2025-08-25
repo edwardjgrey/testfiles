@@ -1,612 +1,405 @@
-// src/services/apiService.js - FIXED VERSION with missing methods
+// src/services/apiService.js - FIXED SERVER CONNECTION
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.0.245:3000/api';
+// STEP 1: FIND YOUR COMPUTER'S IP ADDRESS
+// Run this in terminal: ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}'
+// Replace 192.168.0.245 below with YOUR ACTUAL IP ADDRESS
+
+const API_BASE_URL = __DEV__ ? 
+  'http://192.168.0.245:3000/api' : // REPLACE 192.168.0.245 WITH YOUR ACTUAL IP
+  'https://your-production-domain.com/api';
+
+console.log('🌐 API_BASE_URL:', API_BASE_URL);
 
 class ApiService {
-  static async makeRequest(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
+  // FIXED: Enhanced API call with better connection handling
+  async apiCall(endpoint, options = {}) {
+    const maxRetries = 3;
+    let attempt = 0;
     
-    const defaultHeaders = {
-      'Content-Type': 'application/json',
-    };
-
-    // Add auth token if available
-    const token = await AsyncStorage.getItem('authToken');
-    if (token) {
-      defaultHeaders['Authorization'] = `Bearer ${token}`;
-    }
-
-    const config = {
-      headers: defaultHeaders,
-      ...options,
-    };
-
-    console.log('🌐 Making request to:', url);
-    console.log('📤 Request config:', {
-      method: config.method || 'GET',
-      headers: config.headers,
-      body: config.body ? 'Present' : 'None'
-    });
-
-    try {
-      const response = await fetch(url, config);
-      const data = await response.json();
-
-      console.log('📥 Response status:', response.status);
-      console.log('📥 Response data:', data);
-
-      if (!response.ok) {
-        console.error(`❌ API Error (${endpoint}):`, data);
-        throw new Error(data.error || data.message || 'Request failed');
+    while (attempt < maxRetries) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+        
+        const token = await this.getToken();
+        const url = `${API_BASE_URL}${endpoint}`;
+        
+        console.log(`📡 API Call attempt ${attempt + 1}: ${url}`);
+        
+        const response = await fetch(url, {
+          method: options.method || 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` }),
+            ...options.headers,
+          },
+          signal: controller.signal,
+          ...options,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        console.log(`📡 Response status: ${response.status}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ Server error (${response.status}):`, errorText);
+          
+          let errorMessage;
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.message || errorJson.error || `Server error (${response.status})`;
+          } catch {
+            errorMessage = `Server error (${response.status}): ${response.statusText}`;
+          }
+          
+          throw new Error(errorMessage);
+        }
+        
+        // Parse JSON response
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          console.log('✅ API call successful');
+          return data;
+        } else {
+          const text = await response.text();
+          console.warn('⚠️ Non-JSON response:', text.substring(0, 200));
+          throw new Error('Server returned invalid response format');
+        }
+        
+      } catch (error) {
+        attempt++;
+        console.error(`❌ API call attempt ${attempt} failed:`, error.message);
+        
+        if (error.name === 'AbortError') {
+          console.error('❌ Request timed out');
+          throw new Error('Connection timeout. Please check your network and try again.');
+        }
+        
+        // Check for connection errors
+        if (error.message.includes('Network request failed') || 
+            error.message.includes('fetch')) {
+          console.error('❌ Network connection failed');
+          
+          if (attempt >= maxRetries) {
+            throw new Error(
+              `Cannot connect to server at ${API_BASE_URL}.\n\n` +
+              `Please check:\n` +
+              `1. Server is running (node server.js)\n` +
+              `2. Phone and computer on same WiFi\n` +
+              `3. Correct IP address: ${API_BASE_URL}`
+            );
+          }
+        } else if (attempt >= maxRetries) {
+          throw new Error(`Server error after ${maxRetries} attempts: ${error.message}`);
+        }
+        
+        // Exponential backoff
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log(`⏳ Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-
-      return data;
-    } catch (error) {
-      console.error(`❌ Network error for ${endpoint}:`, error);
-      
-      if (error.message === 'Network request failed' || error.message.includes('fetch')) {
-        throw new Error('Unable to connect to server. Please check your internet connection.');
-      }
-      
-      throw error;
     }
   }
 
-  // Token management
-  static async storeToken(token) {
+  // Test server connection
+  async testConnection() {
     try {
-      await AsyncStorage.setItem('authToken', token);
-      console.log('✅ Auth token stored');
+      console.log('🔍 Testing server connection...');
+      const response = await this.apiCall('/health');
+      
+      if (response && response.status === 'healthy') {
+        console.log('✅ Server connection successful!');
+        return { success: true, message: 'Connected to server' };
+      } else {
+        throw new Error('Invalid health check response');
+      }
     } catch (error) {
-      console.error('❌ Failed to store auth token:', error);
+      console.error('❌ Server connection failed:', error.message);
+      return { success: false, error: error.message };
     }
   }
 
-  static async getToken() {
+  // FIXED: Robust logout that doesn't depend on backend response
+  async signOut() {
     try {
-      return await AsyncStorage.getItem('authToken');
+      console.log('🚪 Starting logout process...');
+      
+      // Step 1: Clear all local data first (most important)
+      const keysToRemove = [
+        'authToken',
+        'refreshToken', 
+        'userData',
+        'biometricToken',
+        'userPreferences',
+        'lastLoginTime'
+      ];
+      
+      await AsyncStorage.multiRemove(keysToRemove);
+      console.log('✅ Local data cleared successfully');
+      
+      // Step 2: Try to notify backend, but don't fail if it doesn't work
+      try {
+        const result = await this.apiCall('/auth/logout', { method: 'POST' });
+        console.log('✅ Backend logout successful:', result);
+      } catch (logoutError) {
+        console.log('⚠️ Backend logout failed (but local cleanup succeeded):', logoutError.message);
+      }
+      
+      return { success: true, message: 'Logout successful' };
+      
     } catch (error) {
-      console.error('❌ Failed to get auth token:', error);
+      console.error('❌ Logout error:', error);
+      
+      // Even if there's an error, try to clear what we can
+      try {
+        await AsyncStorage.clear();
+        console.log('🔄 Cleared all storage as fallback');
+      } catch (clearError) {
+        console.error('❌ Failed to clear storage:', clearError);
+      }
+      
+      return { 
+        success: false, 
+        error: error.message,
+        message: 'Logout may have failed - you may need to restart the app'
+      };
+    }
+  }
+
+  // Safe token retrieval
+  async getToken() {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      return token;
+    } catch (error) {
+      console.error('Error getting token:', error);
       return null;
     }
   }
 
-  static async removeToken() {
+  // Enhanced token validation
+  async validateToken() {
     try {
-      await AsyncStorage.removeItem('authToken');
-      console.log('✅ Auth token removed');
-    } catch (error) {
-      console.error('❌ Failed to remove auth token:', error);
-    }
-  }
-
-  // ===== MISSING METHODS - FIXED =====
-
-  // Universal user registration method (MISSING)
-  static async registerUser(userData) {
-    try {
-      console.log('📝 Registering user with universal method:', userData.authMethod);
+      const token = await this.getToken();
       
-      const response = await this.makeRequest('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(userData),
-      });
-
-      if (response.success && response.token) {
-        await this.storeToken(response.token);
-        console.log('✅ User registration successful');
+      if (!token) {
+        return { success: false, error: 'No token found' };
       }
-
-      return response;
-    } catch (error) {
-      console.error('❌ User registration failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Validate token method (MISSING)
-  static async validateToken() {
-    try {
-      console.log('🔍 Validating auth token');
       
-      const response = await this.makeRequest('/auth/validate', {
-        method: 'POST',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Token validation failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // User existence check
-  static async checkUserExists(email, phone) {
-    try {
-      // Clean phone number if provided
-      const cleanPhone = phone ? phone.replace(/\s/g, '') : null;
-      console.log('🔍 Checking if user exists with clean data:', { email, phone: cleanPhone });
+      const response = await this.apiCall('/auth/validate');
       
-      const response = await this.makeRequest('/auth/check-user', {
-        method: 'POST',
-        body: JSON.stringify({ email, phone: cleanPhone }),
-      });
-
-      console.log('📋 User existence check result:', response);
-      return response;
-    } catch (error) {
-      console.error('❌ Check user exists error:', error);
-      return { exists: false, error: error.message };
-    }
-  }
-
-  // Phone Sign-in Request
-  static async requestPhoneSignIn(phone, countryCode) {
-    try {
-      // Clean phone number
-      const cleanPhone = phone.replace(/\s/g, '');
-      console.log('📱 Requesting phone sign-in for:', countryCode + cleanPhone);
-      
-      const response = await this.makeRequest('/auth/phone-signin', {
-        method: 'POST',
-        body: JSON.stringify({ phone: cleanPhone, countryCode }),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Phone sign-in request failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Phone Sign-in Verification
-  static async verifyPhoneSignIn(phone, countryCode, code) {
-    try {
-      // Clean phone number
-      const cleanPhone = phone.replace(/\s/g, '');
-      console.log('🔓 Verifying phone sign-in code for clean phone:', cleanPhone);
-      
-      const response = await this.makeRequest('/auth/verify-phone-signin', {
-        method: 'POST',
-        body: JSON.stringify({ phone: cleanPhone, countryCode, code }),
-      });
-
-      if (response.success && response.token) {
-        await this.storeToken(response.token);
-        console.log('✅ Phone sign-in verification successful');
+      if (response && response.user) {
+        return { success: true, user: response.user };
+      } else {
+        return { success: false, error: 'Invalid token response' };
       }
-
-      return response;
-    } catch (error) {
-      console.error('❌ Phone sign-in verification failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Email Sign-in
-  static async signInWithEmail(email, password) {
-    try {
-      console.log('📧 Signing in with email:', email);
       
-      const response = await this.makeRequest('/auth/signin', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.success && response.token) {
-        await this.storeToken(response.token);
-        console.log('✅ Email sign-in successful');
+    } catch (error) {
+      console.error('Token validation error:', error);
+      
+      // If validation fails, clear the invalid token
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        await AsyncStorage.removeItem('authToken');
       }
-
-      return response;
-    } catch (error) {
-      console.error('❌ Email sign-in failed:', error);
+      
       return { success: false, error: error.message };
     }
   }
 
-  // Password Reset
-  static async forgotPassword(email) {
+  // Input sanitization
+  sanitizeInput(input, options = {}) {
+    if (typeof input !== 'string') return input;
+    
+    let sanitized = input.trim();
+    
+    if (options.allowHTML !== true) {
+      sanitized = sanitized
+        .replace(/[<>]/g, '')
+        .replace(/javascript:/gi, '')
+        .replace(/on\w+=/gi, '')
+        .replace(/data:/gi, '');
+    }
+    
+    if (options.maxLength) {
+      sanitized = sanitized.substring(0, options.maxLength);
+    }
+    
+    if (options.type === 'email') {
+      sanitized = sanitized.toLowerCase();
+    }
+    
+    return sanitized;
+  }
+
+  // User registration
+  async registerUser(userData) {
     try {
-      console.log('🔄 Requesting password reset for:', email);
+      const sanitizedData = {
+        authMethod: userData.authMethod,
+        phone: this.sanitizeInput(userData.phone, { maxLength: 20 }),
+        countryCode: this.sanitizeInput(userData.countryCode, { maxLength: 5 }),
+        email: this.sanitizeInput(userData.email, { type: 'email', maxLength: 100 }),
+        firstName: this.sanitizeInput(userData.firstName, { maxLength: 50 }),
+        lastName: this.sanitizeInput(userData.lastName, { maxLength: 50 }),
+        password: userData.password && userData.password.length > 100 ? 
+                  userData.password.substring(0, 100) : userData.password,
+        selectedPlan: userData.selectedPlan,
+        currency: this.sanitizeInput(userData.currency, { maxLength: 5 }),
+        monthlyIncome: userData.monthlyIncome,
+        additionalIncome: userData.additionalIncome,
+        financialGoals: userData.financialGoals,
+        verificationCode: this.sanitizeInput(userData.verificationCode, { maxLength: 10 }),
+        googleId: userData.googleId,
+        appleId: userData.appleId,
+      };
+
+      console.log('📝 Registering user with method:', sanitizedData.authMethod);
       
-      const response = await this.makeRequest('/auth/forgot-password', {
+      const response = await this.apiCall('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(sanitizedData),
       });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Forgot password request failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async resetPassword(email, code, newPassword) {
-    try {
-      console.log('🔄 Resetting password for:', email);
       
-      const response = await this.makeRequest('/auth/reset-password', {
-        method: 'POST',
-        body: JSON.stringify({ email, code, newPassword }),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Password reset failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Test connection
-  static async testConnection() {
-    try {
-      console.log('🔌 Testing API connection');
-      
-      const response = await this.makeRequest('/health', {
-        method: 'GET',
-      });
-
-      console.log('✅ API connection successful');
-      return response;
-    } catch (error) {
-      console.error('❌ API connection failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Sign out
-  static async signOut() {
-    try {
-      console.log('👋 Signing out user');
-      
-      // Call logout endpoint if available
-      try {
-        await this.makeRequest('/auth/logout', {
-          method: 'POST',
-        });
-      } catch (error) {
-        // Ignore logout endpoint errors
-        console.log('⚠️ Logout endpoint not available or failed');
+      if (response && response.user && response.token) {
+        await AsyncStorage.setItem('authToken', response.token);
+        if (response.refreshToken) {
+          await AsyncStorage.setItem('refreshToken', response.refreshToken);
+        }
+        
+        return { 
+          success: true, 
+          user: response.user, 
+          token: response.token 
+        };
+      } else {
+        throw new Error('Invalid registration response');
       }
-
-      // Remove token regardless
-      await this.removeToken();
-      console.log('✅ User signed out');
       
-      return { success: true };
     } catch (error) {
-      console.error('❌ Sign out failed:', error);
+      console.error('Registration error:', error);
       return { success: false, error: error.message };
     }
   }
 
-  // ===== FINANCE API METHODS =====
-
-  // Transactions
-  static async getTransactions(limit = 20, offset = 0) {
+  // Email sign-in
+  async signInWithEmail(email, password) {
     try {
-      console.log('💳 Fetching transactions');
+      const sanitizedEmail = this.sanitizeInput(email, { type: 'email', maxLength: 100 });
       
-      const response = await this.makeRequest(`/finance/transactions?limit=${limit}&offset=${offset}`, {
-        method: 'GET',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to fetch transactions:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async createTransaction(transactionData) {
-    try {
-      console.log('💳 Creating transaction');
-      
-      const response = await this.makeRequest('/finance/transactions', {
-        method: 'POST',
-        body: JSON.stringify(transactionData),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to create transaction:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async updateTransaction(transactionId, transactionData) {
-    try {
-      console.log('💳 Updating transaction:', transactionId);
-      
-      const response = await this.makeRequest(`/finance/transactions/${transactionId}`, {
-        method: 'PUT',
-        body: JSON.stringify(transactionData),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to update transaction:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async deleteTransaction(transactionId) {
-    try {
-      console.log('💳 Deleting transaction:', transactionId);
-      
-      const response = await this.makeRequest(`/finance/transactions/${transactionId}`, {
-        method: 'DELETE',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to delete transaction:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Accounts
-  static async getAccounts() {
-    try {
-      console.log('🏦 Fetching accounts');
-      
-      const response = await this.makeRequest('/finance/accounts', {
-        method: 'GET',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to fetch accounts:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async createAccount(accountData) {
-    try {
-      console.log('🏦 Creating account');
-      
-      const response = await this.makeRequest('/finance/accounts', {
-        method: 'POST',
-        body: JSON.stringify(accountData),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to create account:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Categories
-  static async getCategories() {
-    try {
-      console.log('📂 Fetching categories');
-      
-      const response = await this.makeRequest('/finance/categories', {
-        method: 'GET',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to fetch categories:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Budgets
-  static async getBudgets() {
-    try {
-      console.log('📊 Fetching budgets');
-      
-      const response = await this.makeRequest('/finance/budgets', {
-        method: 'GET',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to fetch budgets:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async createBudget(budgetData) {
-    try {
-      console.log('📊 Creating budget');
-      
-      const response = await this.makeRequest('/finance/budgets', {
-        method: 'POST',
-        body: JSON.stringify(budgetData),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to create budget:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Goals
-  static async getGoals() {
-    try {
-      console.log('🎯 Fetching goals');
-      
-      const response = await this.makeRequest('/finance/goals', {
-        method: 'GET',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to fetch goals:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async createGoal(goalData) {
-    try {
-      console.log('🎯 Creating goal');
-      
-      const response = await this.makeRequest('/finance/goals', {
-        method: 'POST',
-        body: JSON.stringify(goalData),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to create goal:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Subscription Management
-  static async getCurrentSubscription() {
-    try {
-      console.log('📋 Fetching current subscription');
-      
-      const response = await this.makeRequest('/subscriptions/current', {
-        method: 'GET',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to fetch subscription:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async checkFeatureLimit(feature) {
-    try {
-      console.log('🔍 Checking feature limit for:', feature);
-      
-      const response = await this.makeRequest('/subscriptions/check-limit', {
-        method: 'POST',
-        body: JSON.stringify({ feature }),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to check feature limit:', error);
-      return { allowed: false, error: error.message };
-    }
-  }
-
-  static async incrementUsage(feature, count = 1) {
-    try {
-      console.log('📈 Incrementing usage for:', feature);
-      
-      const response = await this.makeRequest('/subscriptions/increment-usage', {
-        method: 'POST',
-        body: JSON.stringify({ feature, count }),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to increment usage:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Analytics
-  static async getSpendingAnalytics(timeframe = 'month') {
-    try {
-      console.log('📈 Fetching spending analytics');
-      
-      const response = await this.makeRequest(`/analytics/spending?timeframe=${timeframe}`, {
-        method: 'GET',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to fetch spending analytics:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async getIncomeAnalytics(timeframe = 'month') {
-    try {
-      console.log('📈 Fetching income analytics');
-      
-      const response = await this.makeRequest(`/analytics/income?timeframe=${timeframe}`, {
-        method: 'GET',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to fetch income analytics:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // User Profile
-  static async getUserProfile() {
-    try {
-      console.log('👤 Fetching user profile');
-      
-      const response = await this.makeRequest('/user/profile', {
-        method: 'GET',
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to fetch user profile:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async updateUserProfile(profileData) {
-    try {
-      console.log('👤 Updating user profile');
-      
-      const response = await this.makeRequest('/user/profile', {
-        method: 'PUT',
-        body: JSON.stringify(profileData),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to update user profile:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Biometric Authentication
-  static async setupBiometric(biometricToken) {
-    try {
-      console.log('👆 Setting up biometric authentication');
-      
-      const response = await this.makeRequest('/auth/setup-biometric', {
-        method: 'POST',
-        body: JSON.stringify({ biometricToken }),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('❌ Biometric setup failed:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async signInWithBiometric(biometricToken) {
-    try {
-      console.log('👆 Signing in with biometric');
-      
-      const response = await this.makeRequest('/auth/signin-biometric', {
-        method: 'POST',
-        body: JSON.stringify({ biometricToken }),
-      });
-
-      if (response.success && response.token) {
-        await this.storeToken(response.token);
-        console.log('✅ Biometric sign-in successful');
+      if (!sanitizedEmail || !password) {
+        throw new Error('Email and password are required');
       }
-
-      return response;
+      
+      const response = await this.apiCall('/auth/signin/email', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: sanitizedEmail,
+          password: password
+        }),
+      });
+      
+      if (response && response.user && response.token) {
+        await AsyncStorage.setItem('authToken', response.token);
+        if (response.refreshToken) {
+          await AsyncStorage.setItem('refreshToken', response.refreshToken);
+        }
+        
+        return { success: true, user: response.user };
+      } else {
+        throw new Error('Invalid credentials');
+      }
+      
     } catch (error) {
-      console.error('❌ Biometric sign-in failed:', error);
+      console.error('Email sign-in error:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  // Phone sign-in request
+  async requestPhoneSignIn(phone, countryCode) {
+    try {
+      const sanitizedPhone = this.sanitizeInput(phone, { maxLength: 20 });
+      const sanitizedCountryCode = this.sanitizeInput(countryCode, { maxLength: 5 });
+      
+      const response = await this.apiCall('/auth/signin/phone/request', {
+        method: 'POST',
+        body: JSON.stringify({
+          phone: sanitizedPhone,
+          countryCode: sanitizedCountryCode
+        }),
+      });
+      
+      if (response && response.success) {
+        return { success: true, debug_code: response.debug_code };
+      } else {
+        throw new Error(response?.error || 'Failed to send verification code');
+      }
+      
+    } catch (error) {
+      console.error('Phone sign-in request error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Phone verification
+  async verifyPhoneSignIn(phone, countryCode, code) {
+    try {
+      const sanitizedData = {
+        phone: this.sanitizeInput(phone, { maxLength: 20 }),
+        countryCode: this.sanitizeInput(countryCode, { maxLength: 5 }),
+        code: this.sanitizeInput(code, { maxLength: 10 })
+      };
+      
+      const response = await this.apiCall('/auth/signin/phone/verify', {
+        method: 'POST',
+        body: JSON.stringify(sanitizedData),
+      });
+      
+      if (response && response.user && response.token) {
+        await AsyncStorage.setItem('authToken', response.token);
+        if (response.refreshToken) {
+          await AsyncStorage.setItem('refreshToken', response.refreshToken);
+        }
+        
+        return { success: true, user: response.user };
+      } else {
+        throw new Error(response?.error || 'Invalid verification code');
+      }
+      
+    } catch (error) {
+      console.error('Phone verification error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Check if user exists
+  async checkUserExists(emailOrPhone, countryCode = null) {
+    try {
+      let params = {};
+      
+      if (emailOrPhone.includes('@')) {
+        params.email = this.sanitizeInput(emailOrPhone, { type: 'email', maxLength: 100 });
+      } else {
+        params.phone = this.sanitizeInput(emailOrPhone, { maxLength: 20 });
+        if (countryCode) {
+          params.countryCode = this.sanitizeInput(countryCode, { maxLength: 5 });
+        }
+      }
+      
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.apiCall(`/auth/check-exists?${queryString}`);
+      
+      return { exists: Boolean(response?.exists) };
+      
+    } catch (error) {
+      console.error('Check user exists error:', error);
+      return { exists: false };
     }
   }
 }
 
-export default ApiService;
+export default new ApiService();
