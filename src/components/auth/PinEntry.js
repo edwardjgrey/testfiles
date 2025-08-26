@@ -1,4 +1,4 @@
-// src/components/auth/PinEntry.js - ENHANCED UX VERSION
+// src/components/auth/PinEntry.js - ENHANCED UX VERSION with Manual Biometric
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -41,7 +41,6 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
   const [biometricType, setBiometricType] = useState('Biometric');
   const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
   const [showPinInput, setShowPinInput] = useState(false);
-  const [biometricPrompted, setBiometricPrompted] = useState(false);
   const [shouldOfferBiometricSetup, setShouldOfferBiometricSetup] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [initError, setInitError] = useState(null);
@@ -58,11 +57,11 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
   
   useEffect(() => {
     if (user?.id) {
-      console.log('🔐 PinEntry initialized for user:', user.id);
+      console.log('PinEntry initialized for user:', user.id);
       SecurityService.setCurrentUser(user.id);
       initializeAuthentication();
     } else {
-      console.error('❌ No user provided to PinEntry');
+      console.error('No user provided to PinEntry');
       setInitError('No user provided');
       setInitialized(true);
     }
@@ -85,7 +84,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
         const remaining = lockoutTime - Date.now();
 
         if (remaining <= 0) {
-          console.log('✅ Lockout period expired, automatically unlocking...');
+          console.log('Lockout period expired, automatically unlocking...');
           clearInterval(lockoutTimerRef.current);
           lockoutTimerRef.current = null;
           
@@ -119,7 +118,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
 
   const initializeAuthentication = async () => {
     try {
-      console.log('🚀 Initializing authentication flow...');
+      console.log('Initializing authentication flow...');
       setLoading(true);
       
       if (!user?.id) {
@@ -129,14 +128,14 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
       let status;
       try {
         status = await SecurityService.getSecurityStatus(user.id);
-        console.log('🔍 Security status:', status);
+        console.log('Security status:', status);
       } catch (securityError) {
-        console.error('❌ Security status check failed, retrying...', securityError);
+        console.error('Security status check failed, retrying...', securityError);
         try {
           await new Promise(resolve => setTimeout(resolve, 1000));
           status = await SecurityService.getSecurityStatus(user.id);
         } catch (retryError) {
-          console.error('❌ Security status retry failed:', retryError);
+          console.error('Security status retry failed:', retryError);
           status = {
             pinSetup: false,
             failedAttempts: 0,
@@ -149,7 +148,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
       setAttempts(status.failedAttempts || 0);
       
       if (status.isLockedOut && status.lockoutRemainingTime > 0) {
-        console.log('🔒 User is locked out:', {
+        console.log('User is locked out:', {
           remainingTime: Math.round(status.lockoutRemainingTime / 1000),
           lockoutEndTime: new Date(Date.now() + status.lockoutRemainingTime).toLocaleTimeString()
         });
@@ -159,7 +158,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
         setShowPinInput(true);
         setShowBiometricPrompt(false);
       } else if (status.isLockedOut) {
-        console.log('🔓 Lockout expired, resetting...');
+        console.log('Lockout expired, resetting...');
         await SecurityService.resetFailedAttempts(user.id);
         setIsLockedOut(false);
         setLockoutTime(0);
@@ -169,9 +168,9 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
       let biometricInfo;
       try {
         biometricInfo = await BiometricService.getBiometricInfo(user.id);
-        console.log('👤 Biometric info:', biometricInfo);
+        console.log('Biometric info:', biometricInfo);
       } catch (biometricError) {
-        console.error('❌ Biometric info check failed:', biometricError);
+        console.error('Biometric info check failed:', biometricError);
         biometricInfo = {
           available: false,
           hasHardware: false,
@@ -187,18 +186,12 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
 
       if (!status.isLockedOut) {
         if (biometricInfo.available && biometricInfo.isSetup) {
-          console.log('✅ Showing biometric authentication');
+          console.log('Showing biometric authentication screen');
           setShowBiometricPrompt(true);
           setShowPinInput(false);
           startBiometricAnimation();
-          
-          setTimeout(() => {
-            if (!biometricPrompted) {
-              promptBiometricAuth(true);
-            }
-          }, Platform.OS === 'ios' ? 2000 : 1500);
         } else {
-          console.log('📱 Showing PIN input');
+          console.log('Showing PIN input');
           setShowPinInput(true);
           setShowBiometricPrompt(false);
           
@@ -207,7 +200,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
           }
         }
       } else {
-        console.log('🔒 User locked out - PIN only');
+        console.log('User locked out - PIN only');
         setShowPinInput(true);
         setShowBiometricPrompt(false);
       }
@@ -220,7 +213,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
       }).start();
       
     } catch (error) {
-      console.error('❌ Initialize authentication error:', error);
+      console.error('Initialize authentication error:', error);
       setInitError(error.message || 'Failed to initialize authentication');
       setShowPinInput(true);
       setShowBiometricPrompt(false);
@@ -256,7 +249,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
       setForgotPinLoading(true);
       
       // Simulate sending code (replace with actual API call)
-      console.log(`📱 Sending PIN reset code via ${resetMethod} to user:`, user.id);
+      console.log(`Sending PIN reset code via ${resetMethod} to user:`, user.id);
       
       // Mock API call
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -288,7 +281,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
       setForgotPinLoading(true);
       
       // Simulate code verification (replace with actual API call)
-      console.log(`🔍 Verifying reset code: ${resetCode} for user:`, user.id);
+      console.log(`Verifying reset code: ${resetCode} for user:`, user.id);
       
       // Mock API call
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -369,7 +362,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
 
   const verifyPin = async (enteredPin) => {
     try {
-      console.log('🔍 Verifying PIN for user:', user?.id);
+      console.log('Verifying PIN for user:', user?.id);
       setLoading(true);
       
       if (!user?.id) {
@@ -378,10 +371,10 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
 
       SecurityService.setCurrentUser(user.id);
       const result = await SecurityService.verifyPin(enteredPin, user.id);
-      console.log('🔐 PIN verification result:', result);
+      console.log('PIN verification result:', result);
 
       if (result.success) {
-        console.log('✅ PIN verification successful');
+        console.log('PIN verification successful');
         if (lockoutTimerRef.current) {
           clearInterval(lockoutTimerRef.current);
           lockoutTimerRef.current = null;
@@ -395,23 +388,23 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
           onSuccess();
         }
       } else {
-        console.log('❌ PIN verification failed:', result);
+        console.log('PIN verification failed:', result);
         shakeError();
         setPin('');
         
         if (result.lockedOut) {
-          console.log('🔒 Account locked out!');
+          console.log('Account locked out!');
           setIsLockedOut(true);
           setAttempts(5);
           
           if (result.remainingTime) {
             const lockoutEndTime = Date.now() + result.remainingTime;
             setLockoutTime(lockoutEndTime);
-            console.log('🔒 Lockout set until:', new Date(lockoutEndTime).toLocaleTimeString());
+            console.log('Lockout set until:', new Date(lockoutEndTime).toLocaleTimeString());
           } else {
             const lockoutEndTime = Date.now() + (30 * 60 * 1000);
             setLockoutTime(lockoutEndTime);
-            console.log('🔒 Default lockout set until:', new Date(lockoutEndTime).toLocaleTimeString());
+            console.log('Default lockout set until:', new Date(lockoutEndTime).toLocaleTimeString());
           }
           
           Alert.alert(
@@ -421,7 +414,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
         } else {
           const attemptsUsed = result.remainingAttempts ? (5 - result.remainingAttempts) : attempts + 1;
           setAttempts(attemptsUsed);
-          console.log('📈 Failed attempts:', attemptsUsed);
+          console.log('Failed attempts:', attemptsUsed);
           
           Alert.alert(
             getText('incorrectPin'), 
@@ -430,7 +423,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
         }
       }
     } catch (error) {
-      console.error('❌ PIN verification error:', error);
+      console.error('PIN verification error:', error);
       shakeError();
       setPin('');
       Alert.alert('Error', 'Failed to verify PIN. Please try again.');
@@ -598,7 +591,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
         tooManyAttempts: 'PIN кодун туура эмес көп жолу киргизүү',
         securityMeasure: 'Бул аккаунтуңузду коргоо үчүн коопсуздук чарасы',
         timeRemaining: 'Калган убакыт',
-        forgotPin: 'PIN код унутулдубу?',
+        forgotPin: 'PIN код унуттулдубу?',
         resetPin: 'PIN кодун калыбына келтирүү',
         resetYourPin: 'PIN кодуңузду калыбына келтириңиз',
         chooseResetMethod: 'PIN кодуңузду кантип калыбына келтиргиңиз келет?',
@@ -606,25 +599,25 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
         resetViaEmail: 'Email аркылуу код жөнөтүү',
         sendCode: 'Код жөнөтүү',
         enterResetCode: 'Калыбына келтирүү кодун киргизиңиз',
-        resetCodeSent: 'Биз 6 сандуу кодду сиздин ',
-        enterCodeBelow: 'Төмөндө кодду киргизиңиз:',
-        verifyCode: 'Кодду текшерүү',
+        resetCodeSent: 'Биз 6 сандуу коддү сиздин ',
+        enterCodeBelow: 'Төмөндө коддү киргизиңиз:',
+        verifyCode: 'Коддү текшерүү',
         createNewPin: 'Жаңы PIN түзүү',
         enterNewPin: 'Жаңы 6 сандуу PIN киргизиңиз',
         confirmNewPin: 'Жаңы PIN кодуңузду ырастаңыз',
         resetPinButton: 'PIN калыбына келтирүү',
         codeSent: 'Код жөнөтүлдү',
-        codeSentToPhone: 'Ырастоо коду телефон номериңизге жөнөтүлдү.',
-        codeSentToEmail: 'Ырастоо коду электрондук почтаңызга жөнөтүлдү.',
+        codeSentToPhone: 'Ырастоо кодду телефон номериңизге жөнөтүлдү.',
+        codeSentToEmail: 'Ырастоо кодду электрондук почтаңызга жөнөтүлдү.',
         error: 'Ката',
         success: 'Ийгиликтүү',
         selectResetMethod: 'Калыбына келтирүү ыкмасын тандаңыз',
-        enterValidCode: '6 сандуу туура кодду киргизиңиз',
+        enterValidCode: '6 сандуу туура коддү киргизиңиз',
         enterValidPin: '6 сандуу туура PIN киргизиңиз',
         pinsDoNotMatch: 'PIN коддор дал келген жок',
         invalidCode: 'Туура эмес ырастоо коду',
-        failedToSendCode: 'Кодду жөнөтүү ийгиликсиз болду. Кайра аракет кылыңыз.',
-        codeVerificationFailed: 'Кодду текшерүү ийгиликсиз болду. Кайра аракет кылыңыз.',
+        failedToSendCode: 'Коддү жөнөтүү ийгиликсиз болду. Кайра аракет кылыңыз.',
+        codeVerificationFailed: 'Коддү текшерүү ийгиликсиз болду. Кайра аракет кылыңыз.',
         pinResetSuccess: 'PIN кодуңуз ийгиликтүү калыбына келтирилди!',
         pinResetFailed: 'PIN кодун калыбына келтирүү ийгиликсиз болду. Кайра аракет кылыңыз.',
         cancel: 'Жокко чыгаруу',
@@ -632,7 +625,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
         useBiometric: `${biometricType} колдонуу`,
         enterPinInstead: 'PIN киргизүү',
         biometricTitle: 'Биометрикалык аутентификация',
-        biometricSubtitle: `Кирүү үчүн ${biometricType} колдонуңуз`,
+        biometricSubtitle: `Кирүү үчүн ${biometricType} колдоңуз`,
         authenticating: 'Текшерүү...',
         tapToAuthenticate: 'Кирүү үчүн басыңыз',
         biometricFailed: 'Биометрия ийгиликсиз',
@@ -750,7 +743,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
           useNativeDriver: true,
         }),
       ]).start(() => {
-        if (showBiometricPrompt && !biometricPrompted) {
+        if (showBiometricPrompt) {
           pulse();
         }
       });
@@ -759,34 +752,28 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
     setTimeout(pulse, 300);
   };
 
-  const promptBiometricAuth = async (isAutoPrompted = false) => {
-    if (biometricPrompted) return;
-    
+  // CHANGED: Manual biometric authentication - no auto-prompt
+  const handleBiometricLogin = async () => {
     try {
-      console.log('👆 Prompting biometric authentication...');
-      setBiometricPrompted(true);
+      console.log('Manual biometric authentication triggered...');
       setLoading(true);
       
       const result = await BiometricService.authenticateWithBiometric(
         'Authenticate to access your Akchabar account'
       );
 
-      console.log('🔐 Biometric result:', result);
+      console.log('Biometric result:', result);
 
       if (result.success) {
-        console.log('✅ Biometric authentication successful');
+        console.log('Biometric authentication successful');
         setLoading(false);
         onSuccess();
       } else if (result.cancelled) {
-        console.log('❌ Biometric cancelled by user');
+        console.log('Biometric cancelled by user');
         setLoading(false);
-        if (isAutoPrompted) {
-          showBiometricFallbackOptions();
-        } else {
-          switchToPinEntry();
-        }
+        // Stay on biometric screen, let user try again or switch to PIN
       } else if (result.locked) {
-        console.log('🔒 Biometric locked out');
+        console.log('Biometric locked out');
         setLoading(false);
         Alert.alert(
           'Biometric Locked',
@@ -794,74 +781,42 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
           [{ text: 'Use PIN', onPress: switchToPinEntry }]
         );
       } else {
-        console.log('❌ Biometric failed:', result.error);
+        console.log('Biometric failed:', result.error);
         setLoading(false);
-        showBiometricFailedOptions(result.error);
+        Alert.alert(
+          getText('biometricFailed'),
+          result.error || 'Please try again or use your PIN.',
+          [
+            { text: getText('tryBiometricAgain'), onPress: () => {} },
+            { text: getText('enterPinInstead'), onPress: switchToPinEntry }
+          ]
+        );
       }
     } catch (error) {
-      console.error('❌ Biometric authentication error:', error);
+      console.error('Biometric authentication error:', error);
       setLoading(false);
-      showBiometricFailedOptions('Biometric authentication failed. Please try again or use your PIN.');
+      Alert.alert(
+        getText('biometricFailed'),
+        'Biometric authentication failed. Please try again or use your PIN.',
+        [{ text: 'Use PIN', onPress: switchToPinEntry }]
+      );
     }
   };
 
-  const showBiometricFallbackOptions = () => {
-    Alert.alert(
-      getText('biometricCancelled'),
-      getText('fallbackToPinPrompt'),
-      [
-        {
-          text: getText('tryBiometricAgain'),
-          onPress: () => {
-            setBiometricPrompted(false);
-            setTimeout(() => promptBiometricAuth(false), 1000);
-          }
-        },
-        {
-          text: getText('enterPinInstead'),
-          onPress: switchToPinEntry
-        }
-      ]
-    );
-  };
-
-  const showBiometricFailedOptions = (errorMessage) => {
-    Alert.alert(
-      getText('biometricFailed'),
-      errorMessage || 'Please try again or use your PIN',
-      [
-        {
-          text: getText('tryBiometricAgain'),
-          onPress: () => {
-            setBiometricPrompted(false);
-            setTimeout(() => promptBiometricAuth(false), 1000);
-          }
-        },
-        {
-          text: getText('enterPinInstead'),
-          onPress: switchToPinEntry
-        }
-      ]
-    );
-  };
-
   const switchToPinEntry = () => {
-    console.log('🔄 Switching to PIN entry');
+    console.log('Switching to PIN entry');
     setShowBiometricPrompt(false);
     setShowPinInput(true);
-    setBiometricPrompted(false);
     setPin('');
   };
 
   const switchToBiometric = () => {
     if (biometricAvailable && biometricSetup && !isLockedOut) {
-      console.log('🔄 Switching to biometric');
+      console.log('Switching to biometric');
       setShowPinInput(false);
       setShowBiometricPrompt(true);
       setPin('');
-      setBiometricPrompted(false);
       startBiometricAnimation();
-      setTimeout(() => promptBiometricAuth(false), 1000);
     }
   };
 
@@ -875,7 +830,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
           text: getText('enable'),
           onPress: async () => {
             try {
-              console.log('🔧 Setting up biometric...');
+              console.log('Setting up biometric...');
               const setupResult = await BiometricService.setupBiometric(user.id);
               if (setupResult.success) {
                 Alert.alert('Success', getText('biometricSetupSuccess'));
@@ -1236,16 +1191,23 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
             <>
               <TouchableOpacity
                 style={styles.biometricLockoutButton}
-                onPress={() => promptBiometricAuth(false)}
+                onPress={handleBiometricLogin}
+                disabled={loading}
               >
-                <Ionicons
-                  name={biometricType === 'Face ID' ? 'scan' : 'finger-print'}
-                  size={24}
-                  color="#98DDA6"
-                />
-                <Text style={styles.biometricLockoutText}>
-                  {getText('useBiometric')}
-                </Text>
+                {loading ? (
+                  <ActivityIndicator size="small" color="#98DDA6" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name={biometricType === 'Face ID' ? 'scan' : 'finger-print'}
+                      size={24}
+                      color="#98DDA6"
+                    />
+                    <Text style={styles.biometricLockoutText}>
+                      {getText('useBiometric')}
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
               
               <View style={styles.orDivider}>
@@ -1316,9 +1278,10 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
           {getText('biometricSubtitle')}
         </Text>
         
+        {/* CHANGED: Manual button instead of auto-prompt */}
         <TouchableOpacity
           style={[styles.biometricButton, loading && styles.biometricButtonDisabled]}
-          onPress={() => promptBiometricAuth(false)}
+          onPress={handleBiometricLogin}
           disabled={loading}
         >
           {loading ? (
@@ -1354,6 +1317,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
     </Animated.View>
   );
 
+  // CHANGED: Always show PIN input screen (no more separate biometric screen)
   const renderPinInput = () => {
     if (isLockedOut) {
       return renderLockoutScreen();
@@ -1467,6 +1431,7 @@ const PinEntry = ({ language = 'en', onSuccess, onCancel, user }) => {
           )}
         </View>
 
+        {/* Show biometric screen OR PIN input based on state */}
         {showBiometricPrompt 
           ? renderBiometricPrompt() 
           : renderPinInput()
@@ -1589,9 +1554,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 30,
     borderWidth: 3,
-    borderColor: 'rgba(152, 221, 166, 0.4)',
+    borderColor: 'rgba(152, 221, 166, 0)',
     shadowColor: '#98DDA6',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 0},
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
@@ -1825,7 +1790,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
 
-  // UX ENHANCEMENT: Improved Options styling
+  // Options styling
   optionsContainer: {
     alignItems: 'center',
     gap: 20,
@@ -2026,7 +1991,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  // UX ENHANCEMENT: Forgot PIN Modal styles
+  // Modal styles
   modalContainer: {
     flex: 1,
     backgroundColor: '#05212a',
