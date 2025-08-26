@@ -1,7 +1,6 @@
-// src/services/securityService.js - FIXED VERSION with user-specific PIN storage
+// src/services/securityService.js - FIXED LOCKOUT SYSTEM
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
-import { Alert } from 'react-native';
 
 class SecurityService {
   constructor() {
@@ -10,13 +9,11 @@ class SecurityService {
     this.LOCKOUT_DURATION = 30 * 60 * 1000; // 30 minutes
   }
 
-  // Set current user ID for PIN operations
   setCurrentUser(userId) {
     console.log('🔐 Setting current user for PIN operations:', userId);
     this.currentUserId = userId;
   }
 
-  // Get user-specific keys
   getUserKeys(userId = null) {
     const id = userId || this.currentUserId;
     if (!id) {
@@ -49,23 +46,19 @@ class SecurityService {
     try {
       console.log('🔐 Setting up PIN for user:', userId);
       
-      // Set current user
       this.setCurrentUser(userId);
       const keys = this.getUserKeys(userId);
 
-      // Validate PIN
       if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
         throw new Error('PIN must be exactly 6 digits');
       }
 
-      // Check if PIN already exists for this user
       const existingPin = await SecureStore.getItemAsync(keys.PIN_KEY);
       if (existingPin) {
         console.log('⚠️ PIN already exists for user:', userId, '- removing old PIN first');
         await this.removeExistingPin(userId);
       }
 
-      // Generate salt and hash PIN
       const salt = await this.generateSalt();
       const hashedPin = await this.hashPin(pin, salt);
 
@@ -75,12 +68,10 @@ class SecurityService {
         setupKey: keys.PIN_SETUP_KEY
       });
 
-      // Store securely with user-specific keys
       await SecureStore.setItemAsync(keys.PIN_KEY, hashedPin);
       await SecureStore.setItemAsync(keys.PIN_SALT_KEY, salt);
       await SecureStore.setItemAsync(keys.PIN_SETUP_KEY, 'true');
 
-      // Reset any failed attempts for this user
       await this.resetFailedAttempts(userId);
 
       console.log('✅ PIN setup completed successfully for user:', userId);
@@ -105,7 +96,7 @@ class SecurityService {
     }
   }
 
-  // Verify PIN
+  // FIX 1: Enhanced PIN verification with better lockout handling
   async verifyPin(enteredPin, userId = null) {
     try {
       const id = userId || this.currentUserId;
@@ -116,24 +107,27 @@ class SecurityService {
       console.log('🔍 Verifying PIN for user:', id);
       const keys = this.getUserKeys(id);
 
-      // Check if user is locked out
+      // FIX 2: Enhanced lockout check with detailed logging
       const lockoutCheck = await this.checkLockout(id);
+      console.log('🔒 Lockout check result:', lockoutCheck);
+      
       if (!lockoutCheck.allowed) {
+        const remainingMinutes = Math.ceil(lockoutCheck.remainingTime / 60000);
+        console.log('🚫 User is locked out for', remainingMinutes, 'more minutes');
+        
         return {
           success: false,
-          error: `Too many failed attempts. Try again in ${Math.ceil(lockoutCheck.remainingTime / 60000)} minutes.`,
+          error: `Too many failed attempts. Try again in ${remainingMinutes} minutes.`,
           lockedOut: true,
           remainingTime: lockoutCheck.remainingTime
         };
       }
 
-      // Validate input
       if (!enteredPin || enteredPin.length !== 6 || !/^\d{6}$/.test(enteredPin)) {
         await this.incrementFailedAttempts(id);
         return { success: false, error: 'Invalid PIN format' };
       }
 
-      // Get stored PIN hash and salt for this specific user
       const storedHash = await SecureStore.getItemAsync(keys.PIN_KEY);
       const salt = await SecureStore.getItemAsync(keys.PIN_SALT_KEY);
 
@@ -150,7 +144,6 @@ class SecurityService {
         return { success: false, error: 'PIN not set up for this user' };
       }
 
-      // Hash entered PIN with stored salt
       const enteredHash = await this.hashPin(enteredPin, salt);
 
       console.log('🔍 Hash comparison:', {
@@ -160,31 +153,39 @@ class SecurityService {
         hashesMatch: enteredHash === storedHash
       });
 
-      // Compare hashes
       if (enteredHash === storedHash) {
         console.log('✅ PIN verified successfully for user:', id);
         await this.resetFailedAttempts(id);
         return { success: true };
       } else {
         console.log('❌ PIN verification failed for user:', id);
-        await this.incrementFailedAttempts(id);
         
-        const attempts = await this.getFailedAttempts(id);
-        const remainingAttempts = this.MAX_ATTEMPTS - attempts;
+        // FIX 3: Enhanced failed attempt handling
+        const newAttempts = await this.incrementFailedAttempts(id);
+        const remainingAttempts = this.MAX_ATTEMPTS - newAttempts;
+        
+        console.log('📊 Failed attempts status:', {
+          newAttempts,
+          remainingAttempts,
+          maxAttempts: this.MAX_ATTEMPTS
+        });
         
         if (remainingAttempts <= 0) {
+          console.log('🚨 Maximum attempts reached - setting lockout');
           await this.setLockout(id);
+          
           return {
             success: false,
             error: 'Too many failed attempts. Account locked for 30 minutes.',
-            lockedOut: true
+            lockedOut: true,
+            remainingTime: this.LOCKOUT_DURATION
           };
         }
         
         return {
           success: false,
           error: `Incorrect PIN. ${remainingAttempts} attempts remaining.`,
-          remainingAttempts
+          remainingAttempts: remainingAttempts
         };
       }
     } catch (error) {
@@ -219,21 +220,163 @@ class SecurityService {
     }
   }
 
+  // FIX 4: Enhanced failed attempts management with better counting
+  async getFailedAttempts(userId = null) {
+    try {
+      const id = userId || this.currentUserId;
+      const keys = this.getUserKeys(id);
+      const attempts = await SecureStore.getItemAsync(keys.FAILED_ATTEMPTS_KEY);
+      const count = parseInt(attempts) || 0;
+      
+      console.log('📊 Current failed attempts for user', id, ':', count);
+      return count;
+    } catch (error) {
+      console.error('Get failed attempts error:', error);
+      return 0;
+    }
+  }
+
+  async incrementFailedAttempts(userId = null) {
+    try {
+      const id = userId || this.currentUserId;
+      const keys = this.getUserKeys(id);
+      const current = await this.getFailedAttempts(id);
+      const newCount = current + 1;
+      
+      await SecureStore.setItemAsync(keys.FAILED_ATTEMPTS_KEY, newCount.toString());
+      console.log('📈 Incremented failed attempts for user:', id, 'from', current, 'to', newCount);
+      
+      return newCount;
+    } catch (error) {
+      console.error('Increment failed attempts error:', error);
+      return 0;
+    }
+  }
+
+  async resetFailedAttempts(userId = null) {
+    try {
+      const id = userId || this.currentUserId;
+      const keys = this.getUserKeys(id);
+      
+      await SecureStore.deleteItemAsync(keys.FAILED_ATTEMPTS_KEY);
+      await SecureStore.deleteItemAsync(keys.LOCKOUT_TIME_KEY);
+      
+      console.log('🔄 Reset failed attempts and lockout for user:', id);
+    } catch (error) {
+      console.error('Reset failed attempts error:', error);
+    }
+  }
+
+  // FIX 5: Enhanced lockout management with precise timing
+  async setLockout(userId = null) {
+    try {
+      const id = userId || this.currentUserId;
+      const keys = this.getUserKeys(id);
+      const lockoutTime = Date.now() + this.LOCKOUT_DURATION;
+      
+      await SecureStore.setItemAsync(keys.LOCKOUT_TIME_KEY, lockoutTime.toString());
+      
+      console.log('🔒 Set lockout for user:', id, {
+        lockoutDurationMs: this.LOCKOUT_DURATION,
+        lockoutDurationMin: this.LOCKOUT_DURATION / 60000,
+        lockoutEndTime: new Date(lockoutTime).toLocaleString(),
+        currentTime: new Date().toLocaleString()
+      });
+    } catch (error) {
+      console.error('Set lockout error:', error);
+    }
+  }
+
+  async checkLockout(userId = null) {
+    try {
+      const id = userId || this.currentUserId;
+      const keys = this.getUserKeys(id);
+      const lockoutTimeStr = await SecureStore.getItemAsync(keys.LOCKOUT_TIME_KEY);
+      
+      if (!lockoutTimeStr) {
+        console.log('🔓 No lockout set for user:', id);
+        return { allowed: true };
+      }
+
+      const lockoutTime = parseInt(lockoutTimeStr);
+      const now = Date.now();
+      const remainingTime = lockoutTime - now;
+
+      console.log('🔍 Lockout check details:', {
+        userId: id,
+        lockoutTime: new Date(lockoutTime).toLocaleString(),
+        currentTime: new Date(now).toLocaleString(),
+        remainingTimeMs: remainingTime,
+        remainingTimeMin: Math.ceil(remainingTime / 60000),
+        isLocked: remainingTime > 0
+      });
+
+      if (remainingTime > 0) {
+        return {
+          allowed: false,
+          remainingTime: remainingTime
+        };
+      } else {
+        console.log('🔓 Lockout expired, auto-resetting for user:', id);
+        await this.resetFailedAttempts(id);
+        return { allowed: true };
+      }
+    } catch (error) {
+      console.error('Check lockout error:', error);
+      return { allowed: true };
+    }
+  }
+
+  // FIX 6: Enhanced security status with comprehensive information
+  async getSecurityStatus(userId = null) {
+    try {
+      const id = userId || this.currentUserId;
+      if (!id) {
+        console.log('⚠️ No user ID for security status check');
+        return {
+          pinSetup: false,
+          failedAttempts: 0,
+          isLockedOut: false,
+          lockoutRemainingTime: 0
+        };
+      }
+
+      const isPinSetup = await this.isPinSetup(id);
+      const failedAttempts = await this.getFailedAttempts(id);
+      const lockoutCheck = await this.checkLockout(id);
+
+      const status = {
+        pinSetup: isPinSetup,
+        failedAttempts: failedAttempts,
+        isLockedOut: !lockoutCheck.allowed,
+        lockoutRemainingTime: lockoutCheck.remainingTime || 0
+      };
+
+      console.log('📊 Complete security status for user:', id, status);
+      return status;
+    } catch (error) {
+      console.error('Get security status error:', error);
+      return {
+        pinSetup: false,
+        failedAttempts: 0,
+        isLockedOut: false,
+        lockoutRemainingTime: 0
+      };
+    }
+  }
+
   // Change PIN (requires old PIN)
   async changePin(oldPin, newPin, userId) {
     try {
       console.log('🔄 Changing PIN for user:', userId);
       
-      // Set current user
       this.setCurrentUser(userId);
 
-      // Verify old PIN first
       const oldPinVerification = await this.verifyPin(oldPin, userId);
       if (!oldPinVerification.success) {
         return { success: false, error: 'Current PIN is incorrect' };
       }
 
-      // Remove old PIN and setup new one
       await this.removeExistingPin(userId);
       return await this.setupPin(newPin, userId);
     } catch (error) {
@@ -248,13 +391,11 @@ class SecurityService {
       const id = userId || this.currentUserId;
       console.log('🗑️ Removing PIN for user:', id);
 
-      // Verify PIN first
       const verification = await this.verifyPin(pin, id);
       if (!verification.success) {
         return { success: false, error: 'Incorrect PIN' };
       }
 
-      // Remove all PIN-related data for this user
       await this.removeExistingPin(id);
 
       console.log('✅ PIN removed successfully for user:', id);
@@ -262,124 +403,6 @@ class SecurityService {
     } catch (error) {
       console.error('❌ PIN removal failed:', error);
       return { success: false, error: error.message };
-    }
-  }
-
-  // Failed attempts management (user-specific)
-  async getFailedAttempts(userId = null) {
-    try {
-      const id = userId || this.currentUserId;
-      const keys = this.getUserKeys(id);
-      const attempts = await SecureStore.getItemAsync(keys.FAILED_ATTEMPTS_KEY);
-      return parseInt(attempts) || 0;
-    } catch (error) {
-      return 0;
-    }
-  }
-
-  async incrementFailedAttempts(userId = null) {
-    try {
-      const id = userId || this.currentUserId;
-      const keys = this.getUserKeys(id);
-      const current = await this.getFailedAttempts(id);
-      await SecureStore.setItemAsync(keys.FAILED_ATTEMPTS_KEY, (current + 1).toString());
-      console.log('📈 Incremented failed attempts for user:', id, 'to:', current + 1);
-    } catch (error) {
-      console.error('Increment failed attempts error:', error);
-    }
-  }
-
-  async resetFailedAttempts(userId = null) {
-    try {
-      const id = userId || this.currentUserId;
-      const keys = this.getUserKeys(id);
-      await SecureStore.deleteItemAsync(keys.FAILED_ATTEMPTS_KEY);
-      await SecureStore.deleteItemAsync(keys.LOCKOUT_TIME_KEY);
-      console.log('🔄 Reset failed attempts for user:', id);
-    } catch (error) {
-      console.error('Reset failed attempts error:', error);
-    }
-  }
-
-  // Lockout management (user-specific)
-  async setLockout(userId = null) {
-    try {
-      const id = userId || this.currentUserId;
-      const keys = this.getUserKeys(id);
-      const lockoutTime = Date.now() + this.LOCKOUT_DURATION;
-      await SecureStore.setItemAsync(keys.LOCKOUT_TIME_KEY, lockoutTime.toString());
-      console.log('🔒 Set lockout for user:', id, 'until:', new Date(lockoutTime));
-    } catch (error) {
-      console.error('Set lockout error:', error);
-    }
-  }
-
-  async checkLockout(userId = null) {
-    try {
-      const id = userId || this.currentUserId;
-      const keys = this.getUserKeys(id);
-      const lockoutTimeStr = await SecureStore.getItemAsync(keys.LOCKOUT_TIME_KEY);
-      
-      if (!lockoutTimeStr) {
-        return { allowed: true };
-      }
-
-      const lockoutTime = parseInt(lockoutTimeStr);
-      const now = Date.now();
-
-      if (now < lockoutTime) {
-        return {
-          allowed: false,
-          remainingTime: lockoutTime - now
-        };
-      } else {
-        // Lockout expired, reset
-        await this.resetFailedAttempts(id);
-        return { allowed: true };
-      }
-    } catch (error) {
-      console.error('Check lockout error:', error);
-      return { allowed: true };
-    }
-  }
-
-  // Get security status for specific user
-  async getSecurityStatus(userId = null) {
-    try {
-      const id = userId || this.currentUserId;
-      if (!id) {
-        return {
-          pinSetup: false,
-          failedAttempts: 0,
-          isLockedOut: false,
-          lockoutRemainingTime: 0
-        };
-      }
-
-      const isPinSetup = await this.isPinSetup(id);
-      const failedAttempts = await this.getFailedAttempts(id);
-      const lockoutCheck = await this.checkLockout(id);
-
-      console.log('📊 Security status for user:', id, {
-        pinSetup: isPinSetup,
-        failedAttempts,
-        isLockedOut: !lockoutCheck.allowed
-      });
-
-      return {
-        pinSetup: isPinSetup,
-        failedAttempts,
-        isLockedOut: !lockoutCheck.allowed,
-        lockoutRemainingTime: lockoutCheck.remainingTime || 0
-      };
-    } catch (error) {
-      console.error('Get security status error:', error);
-      return {
-        pinSetup: false,
-        failedAttempts: 0,
-        isLockedOut: false,
-        lockoutRemainingTime: 0
-      };
     }
   }
 
@@ -397,7 +420,6 @@ class SecurityService {
       return { valid: false, error: 'PIN must contain only numbers' };
     }
 
-    // Check for common weak PINs
     const weakPins = [
       '000000', '111111', '222222', '333333', '444444', '555555',
       '666666', '777777', '888888', '999999', '123456', '654321',
@@ -411,12 +433,26 @@ class SecurityService {
     return { valid: true };
   }
 
-  // Emergency PIN reset (for development/testing) - removes ALL user PINs
+  // FIX 7: Force unlock method for testing/debugging
+  async forceUnlock(userId) {
+    try {
+      console.log('🚨 Force unlocking user:', userId);
+      
+      await this.resetFailedAttempts(userId);
+      
+      console.log('✅ Force unlock completed for user:', userId);
+      return { success: true };
+    } catch (error) {
+      console.error('Force unlock error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Emergency PIN reset (removes ALL user PINs)
   async emergencyReset() {
     try {
       console.log('🚨 Emergency PIN reset - removing ALL user PINs');
       
-      // This is a nuclear option - removes all PIN data
       const allKeys = await SecureStore.getAllKeysAsync?.() || [];
       const pinKeys = allKeys.filter(key => 
         key.includes('user_pin_hash_') || 
@@ -477,6 +513,42 @@ class SecurityService {
         lockedOut: false,
         remainingLockoutTime: 0
       };
+    }
+  }
+
+  // FIX 8: Debug method to check lockout status in real-time
+  async debugLockoutStatus(userId) {
+    if (!__DEV__) return;
+    
+    try {
+      const keys = this.getUserKeys(userId);
+      const lockoutTimeStr = await SecureStore.getItemAsync(keys.LOCKOUT_TIME_KEY);
+      const failedAttempts = await this.getFailedAttempts(userId);
+      const now = Date.now();
+      
+      if (lockoutTimeStr) {
+        const lockoutTime = parseInt(lockoutTimeStr);
+        const remaining = Math.max(0, lockoutTime - now);
+        
+        console.log('🔍 DEBUG LOCKOUT STATUS:', {
+          userId,
+          failedAttempts,
+          lockoutEndTime: new Date(lockoutTime).toLocaleString(),
+          currentTime: new Date(now).toLocaleString(),
+          remainingMs: remaining,
+          remainingMinutes: Math.ceil(remaining / 60000),
+          isCurrentlyLocked: remaining > 0
+        });
+      } else {
+        console.log('🔍 DEBUG LOCKOUT STATUS:', {
+          userId,
+          failedAttempts,
+          lockoutTime: 'NOT_SET',
+          isCurrentlyLocked: false
+        });
+      }
+    } catch (error) {
+      console.error('Debug lockout status error:', error);
     }
   }
 
