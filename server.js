@@ -1,4 +1,5 @@
-// server.js - FIXED VERSION with Database Schema Issues Resolved
+
+        // server.js - FIXED VERSION with correct endpoints and database schema
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -108,7 +109,7 @@ const sanitizeInput = (req, res, next) => {
 
 app.use(sanitizeInput);
 
-const JWT_SECRET = process.env.JWT_SECRET || '235711';
+const JWT_SECRET = 'akchabar_secret_key_2025';
 
 // Validation functions
 const validateEmail = (email) => {
@@ -135,24 +136,12 @@ const validatePhone = (phone, countryCode) => {
   return cleanPhone.length >= 7 && cleanPhone.length <= 15 && /^\d+$/.test(cleanPhone);
 };
 
-// FIXED: Database setup with proper schema
-// FIXED: Database setup function (replace lines 194-258 in your server.js)
+// FIXED: Database setup function
 async function setupDatabase() {
   try {
     console.log('🔄 Setting up database tables...');
     
-    // Drop existing tables that might have conflicts (ONLY FOR DEVELOPMENT)
-    if (process.env.NODE_ENV !== 'production') {
-      try {
-        await pool.query('DROP TABLE IF EXISTS user_subscriptions CASCADE');
-        await pool.query('DROP TABLE IF EXISTS subscription_plans CASCADE');
-        console.log('🗑️ Cleaned up existing subscription tables');
-      } catch (cleanupError) {
-        console.log('No existing tables to clean up');
-      }
-    }
-    
-    // Create users table
+    // Create users table with ALL required columns
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -183,7 +172,7 @@ async function setupDatabase() {
       )
     `);
 
-    // FIXED: Create subscription plans table
+    // Create subscription plans table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS subscription_plans (
         id VARCHAR(20) PRIMARY KEY,
@@ -203,7 +192,7 @@ async function setupDatabase() {
       )
     `);
 
-    // FIXED: Insert default subscription plans (removed updated_at reference)
+    // Insert default subscription plans
     await pool.query(`
       INSERT INTO subscription_plans (
         id, name, description, price_kgs, billing_period,
@@ -310,29 +299,6 @@ async function authenticateToken(req, res, next) {
   }
 }
 
-// 🔥 CRITICAL FIX: Logout endpoint that returns proper JSON
-app.post('/api/auth/logout', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    
-    console.log(`🚪 User ${userId} logged out at ${new Date().toISOString()}`);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Logout successful',
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Logout failed',
-      message: 'An error occurred during logout'
-    });
-  }
-});
-
 // User registration
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -423,11 +389,25 @@ app.post('/api/auth/register', async (req, res) => {
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) 
         RETURNING id, email, phone, first_name, last_name, monthly_income, currency, selected_plan, auth_method, created_at
       `, [
-        email ? email.toLowerCase() : null, passwordHash, firstName, lastName,
-        phone ? phone.replace(/\s/g, '') : null, countryCode, profilePicture,
-        monthlyIncome || null, currency || 'KGS', selectedPlan || 'basic',
-        authMethod || 'email', verificationCode, googleId, appleId, socialToken,
-        bio, dateOfBirth, occupation, true
+        email ? email.toLowerCase() : null, 
+        passwordHash, 
+        firstName, 
+        lastName,
+        phone ? phone.replace(/\s/g, '') : null, 
+        countryCode, 
+        profilePicture,
+        monthlyIncome || null, 
+        currency || 'KGS', 
+        selectedPlan || 'basic',
+        authMethod || 'email', 
+        verificationCode, 
+        googleId, 
+        appleId, 
+        socialToken,
+        bio || null, 
+        dateOfBirth || null,  // FIXED: Handle empty date properly
+        occupation || null, 
+        true
       ]);
 
       const userId = newUser.rows[0].id;
@@ -572,9 +552,7 @@ app.post('/api/auth/signin/email', async (req, res) => {
   }
 });
 
-// REPLACE your phone verification endpoints in server.js with these:
-
-// Phone sign in request - FIXED to always work
+// Phone sign in request - FIXED endpoint path
 app.post('/api/auth/signin/phone/request', async (req, res) => {
   try {
     const { phone, countryCode } = req.body;
@@ -599,7 +577,7 @@ app.post('/api/auth/signin/phone/request', async (req, res) => {
 
     const userRecord = user.rows[0];
 
-    // FIXED: Always clear old codes and set fresh one
+    // FIXED: Always set fresh code with current timestamp
     const verificationCode = '123456'; // Fixed code for development
     
     await pool.query(
@@ -608,6 +586,7 @@ app.post('/api/auth/signin/phone/request', async (req, res) => {
     );
 
     console.log(`📱 SMS verification code for ${cleanPhone}: ${verificationCode}`);
+    console.log(`🕐 Code set at: ${new Date().toISOString()}`);
     
     res.json({
       success: true,
@@ -625,7 +604,7 @@ app.post('/api/auth/signin/phone/request', async (req, res) => {
   }
 });
 
-// Phone sign in verification - FIXED to handle all cases
+// Phone sign in verification - FIXED endpoint path
 app.post('/api/auth/signin/phone/verify', async (req, res) => {
   try {
     const { phone, countryCode, code } = req.body;
@@ -668,22 +647,6 @@ app.post('/api/auth/signin/phone/verify', async (req, res) => {
       });
     }
 
-    // FIXED: Skip expiration check in development
-    if (process.env.NODE_ENV === 'production') {
-      // Only check expiration in production
-      const codeAge = Date.now() - new Date(userRecord.updated_at).getTime();
-      if (codeAge > 30 * 60 * 1000) {
-        console.log('❌ Code expired:', codeAge, 'ms ago');
-        return res.status(401).json({ 
-          success: false,
-          error: 'Verification code has expired. Please request a new one.',
-          action: 'request_new_code'
-        });
-      }
-    } else {
-      console.log('🚧 Development mode: Skipping expiration check');
-    }
-
     // Clear verification code and reset failed attempts
     await pool.query(
       'UPDATE users SET verification_code = NULL, failed_login_attempts = 0, locked_until = NULL WHERE id = $1',
@@ -720,85 +683,13 @@ app.post('/api/auth/signin/phone/verify', async (req, res) => {
   }
 });
 
-// Phone sign in verification
-app.post('/api/auth/signin/phone/verify', async (req, res) => {
-  try {
-    const { phone, countryCode, code } = req.body;
-    
-    if (!phone || !countryCode || !code) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Phone number, country code, and verification code are required' 
-      });
-    }
-
-    const cleanPhone = phone.replace(/\s/g, '');
-    const cleanCode = code.replace(/\s/g, '');
-    
-    const user = await pool.query(
-      'SELECT * FROM users WHERE phone = $1 AND verification_code = $2', 
-      [cleanPhone, cleanCode]
-    );
-    
-    if (user.rows.length === 0) {
-      return res.status(401).json({ 
-        success: false,
-        error: 'Invalid verification code' 
-      });
-    }
-
-    const userRecord = user.rows[0];
-
-    // Check if code is expired (10 minutes)
-    const codeAge = Date.now() - new Date(userRecord.updated_at).getTime();
-    if (codeAge > 10 * 60 * 1000) {
-      return res.status(401).json({ 
-        success: false,
-        error: 'Verification code has expired. Please request a new one.' 
-      });
-    }
-
-    // Clear verification code and reset failed attempts
-    await pool.query(
-      'UPDATE users SET verification_code = NULL, failed_login_attempts = 0, locked_until = NULL WHERE id = $1',
-      [userRecord.id]
-    );
-
-    const token = jwt.sign({ userId: userRecord.id }, JWT_SECRET, { expiresIn: '30d' });
-
-    console.log('✅ Phone sign in successful for:', cleanPhone);
-
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: userRecord.id,
-        email: userRecord.email,
-        phone: userRecord.phone,
-        firstName: userRecord.first_name,
-        lastName: userRecord.last_name,
-        name: `${userRecord.first_name} ${userRecord.last_name}`,
-        monthlyIncome: userRecord.monthly_income,
-        currency: userRecord.currency,
-        selectedPlan: userRecord.selected_plan,
-        profilePicture: userRecord.profile_picture
-      }
-    });
-  } catch (error) {
-    console.error('❌ Phone verification error:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'Verification failed. Please try again.' 
-    });
-  }
-});
-
-// Check user exists
+// Check user exists - FIXED endpoint path
 app.get('/api/auth/check-exists', async (req, res) => {
   try {
     const { email, phone, countryCode } = req.query;
     
     let exists = false;
+    let user = null;
     
     if (email) {
       if (!validateEmail(email)) {
@@ -808,19 +699,18 @@ app.get('/api/auth/check-exists', async (req, res) => {
         });
       }
       
-      const result = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
-      exists = result.rows.length > 0;
-    } else if (phone && countryCode) {
-      if (!validatePhone(phone, countryCode)) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'Invalid phone number format' 
-        });
+      const result = await pool.query('SELECT id, email, phone, auth_method FROM users WHERE email = $1', [email.toLowerCase()]);
+      if (result.rows.length > 0) {
+        exists = true;
+        user = result.rows[0];
       }
-      
+    } else if (phone) {
       const cleanPhone = phone.replace(/\s/g, '');
-      const result = await pool.query('SELECT id FROM users WHERE phone = $1', [cleanPhone]);
-      exists = result.rows.length > 0;
+      const result = await pool.query('SELECT id, email, phone, auth_method FROM users WHERE phone = $1', [cleanPhone]);
+      if (result.rows.length > 0) {
+        exists = true;
+        user = result.rows[0];
+      }
     } else {
       return res.status(400).json({ 
         success: false,
@@ -830,7 +720,12 @@ app.get('/api/auth/check-exists', async (req, res) => {
     
     res.json({ 
       success: true,
-      exists 
+      exists,
+      user: user ? {
+        email: user.email,
+        phone: user.phone,
+        authMethod: user.auth_method
+      } : null
     });
   } catch (error) {
     console.error('Check user exists error:', error);
@@ -841,7 +736,7 @@ app.get('/api/auth/check-exists', async (req, res) => {
   }
 });
 
-// Token validation
+// Token validation - FIXED endpoint method
 app.get('/api/auth/validate', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Token validation for user:', req.user.id);

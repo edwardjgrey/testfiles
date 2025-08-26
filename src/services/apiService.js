@@ -1,4 +1,4 @@
-// src/services/apiService.js - FIXED VERSION with missing methods
+// src/services/apiService.js - FIXED VERSION with correct endpoints
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = 'http://192.168.0.245:3000/api';
@@ -100,9 +100,7 @@ class ApiService {
     }
   }
 
-  // ===== MISSING METHODS - FIXED =====
-
-  // Universal user registration method (MISSING)
+  // Universal user registration method
   static async registerUser(userData) {
     try {
       console.log('📝 Registering user with universal method:', userData.authMethod);
@@ -124,7 +122,7 @@ class ApiService {
     }
   }
 
-  // Validate token method (FIXED)
+  // Validate token method - FIXED ENDPOINT
   static async validateToken() {
     try {
       const token = await this.getToken();
@@ -137,7 +135,7 @@ class ApiService {
       console.log('🔍 Validating auth token');
       
       const response = await this.makeRequest('/auth/validate', {
-        method: 'POST',
+        method: 'GET',
       });
 
       return response;
@@ -154,16 +152,19 @@ class ApiService {
     }
   }
 
-  // User existence check
+  // User existence check - FIXED ENDPOINT
   static async checkUserExists(email, phone) {
     try {
       // Clean phone number if provided
       const cleanPhone = phone ? phone.replace(/\s/g, '') : null;
       console.log('🔍 Checking if user exists with clean data:', { email, phone: cleanPhone });
       
-      const response = await this.makeRequest('/auth/check-user', {
-        method: 'POST',
-        body: JSON.stringify({ email, phone: cleanPhone }),
+      const params = new URLSearchParams();
+      if (email) params.append('email', email);
+      if (cleanPhone) params.append('phone', cleanPhone);
+      
+      const response = await this.makeRequest(`/auth/check-exists?${params.toString()}`, {
+        method: 'GET',
       });
 
       console.log('📋 User existence check result:', response);
@@ -174,14 +175,14 @@ class ApiService {
     }
   }
 
-  // Phone Sign-in Request
+  // Phone Sign-in Request - FIXED ENDPOINT PATH
   static async requestPhoneSignIn(phone, countryCode) {
     try {
       // Clean phone number
       const cleanPhone = phone.replace(/\s/g, '');
       console.log('📱 Requesting phone sign-in for:', countryCode + cleanPhone);
       
-      const response = await this.makeRequest('/auth/phone-signin', {
+      const response = await this.makeRequest('/auth/signin/phone/request', {
         method: 'POST',
         body: JSON.stringify({ phone: cleanPhone, countryCode }),
       });
@@ -193,14 +194,14 @@ class ApiService {
     }
   }
 
-  // Phone Sign-in Verification
+  // Phone Sign-in Verification - FIXED ENDPOINT PATH
   static async verifyPhoneSignIn(phone, countryCode, code) {
     try {
       // Clean phone number
       const cleanPhone = phone.replace(/\s/g, '');
       console.log('🔓 Verifying phone sign-in code for clean phone:', cleanPhone);
       
-      const response = await this.makeRequest('/auth/verify-phone-signin', {
+      const response = await this.makeRequest('/auth/signin/phone/verify', {
         method: 'POST',
         body: JSON.stringify({ phone: cleanPhone, countryCode, code }),
       });
@@ -217,12 +218,12 @@ class ApiService {
     }
   }
 
-  // Email Sign-in
+  // Email Sign-in - FIXED ENDPOINT PATH
   static async signInWithEmail(email, password) {
     try {
       console.log('📧 Signing in with email:', email);
       
-      const response = await this.makeRequest('/auth/signin', {
+      const response = await this.makeRequest('/auth/signin/email', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
@@ -290,28 +291,28 @@ class ApiService {
   }
 
   // Sign out
- static async signOut() {
-  try {
-    console.log('👋 Signing out user');
-    
-    // Skip server logout entirely since it's causing issues
-    // Just remove the local token - this is what actually signs the user out
-    await this.removeToken();
-    console.log('✅ User signed out successfully');
-    
-    return { success: true };
-  } catch (error) {
-    console.error('❌ Sign out failed:', error);
-    // Even if there's an error, try to remove the token
+  static async signOut() {
     try {
+      console.log('👋 Signing out user');
+      
+      // Skip server logout entirely since it's causing issues
+      // Just remove the local token - this is what actually signs the user out
       await this.removeToken();
-      console.log('✅ Token removed despite error');
-    } catch (tokenError) {
-      console.error('❌ Failed to remove token:', tokenError);
+      console.log('✅ User signed out successfully');
+      
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Sign out failed:', error);
+      // Even if there's an error, try to remove the token
+      try {
+        await this.removeToken();
+        console.log('✅ Token removed despite error');
+      } catch (tokenError) {
+        console.error('❌ Failed to remove token:', tokenError);
+      }
+      return { success: false, error: error.message };
     }
-    return { success: false, error: error.message };
   }
-}
 
   // ===== FINANCE API METHODS =====
 

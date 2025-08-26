@@ -158,41 +158,45 @@ export default function App() {
   };
 
   // Check if user needs to setup PIN or authenticate with PIN
-  const checkSecuritySetup = async (userId) => {
-    try {
-      // Ensure SecurityService has the correct user ID
-      SecurityService.setCurrentUser(userId);
-      
-      const securityStatus = await SecurityService.getSecurityStatus(userId);
-      
-      if (!securityStatus.pinSetup) {
-        setPinSetupRequired(true);
-        setPinAuthRequired(false);
-        setSecuritySetupComplete(false);
-      } else if (securityStatus.isLockedOut) {
-        setPinSetupRequired(false);
-        setPinAuthRequired(true);
-        setSecuritySetupComplete(false);
-      } else {
-        // PIN is setup, check if we need to authenticate
-        const pinAuthNeeded = await SecurityService.requiresPinAuth(userId);
-        if (pinAuthNeeded.required) {
-          setPinSetupRequired(false);
-          setPinAuthRequired(true);
-          setSecuritySetupComplete(false);
-        } else {
-          setPinSetupRequired(false);
-          setPinAuthRequired(false);
-          setSecuritySetupComplete(true);
-        }
-      }
-    } catch (error) {
-      // If security check fails, require PIN setup for safety
+// Around line 180 in App.js, add debug logging:
+// Replace the checkSecuritySetup function in App.js with this:
+
+const checkSecuritySetup = async (userId) => {
+  try {
+    console.log('🔍 Checking security setup for user:', userId);
+    
+    // Ensure SecurityService has the correct user ID
+    SecurityService.setCurrentUser(userId);
+    
+    const securityStatus = await SecurityService.getSecurityStatus(userId);
+    console.log('📊 Security status:', securityStatus);
+    
+    if (!securityStatus.pinSetup) {
+      console.log('📍 PIN not setup - showing PIN setup screen');
       setPinSetupRequired(true);
       setPinAuthRequired(false);
       setSecuritySetupComplete(false);
+    } else if (securityStatus.isLockedOut) {
+      console.log('🔒 User is locked out - showing PIN entry to unlock');
+      setPinSetupRequired(false);
+      setPinAuthRequired(true);
+      setSecuritySetupComplete(false);
+    } else {
+      console.log('🔑 PIN exists - user needs to authenticate');
+      // PIN is setup, user needs to enter it to continue
+      setPinSetupRequired(false);
+      setPinAuthRequired(true);  // ALWAYS require PIN auth for existing users
+      setSecuritySetupComplete(false);
     }
-  };
+  } catch (error) {
+    console.error('❌ Security check failed:', error);
+    // If security check fails, assume new user needs PIN setup
+    console.log('⚠️ Defaulting to PIN setup due to error');
+    setPinSetupRequired(true);
+    setPinAuthRequired(false);
+    setSecuritySetupComplete(false);
+  }
+};
 
   // Handle successful PIN setup
   const handlePinSetupComplete = async () => {
