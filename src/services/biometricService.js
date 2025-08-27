@@ -1,4 +1,4 @@
-// src/services/biometricService.js - iOS-Compatible Fixed Version
+// src/services/biometricService.js - FIXED VERSION
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
@@ -8,7 +8,46 @@ class BiometricService {
   constructor() {
     this.BIOMETRIC_KEY_BASE = 'biometric_enabled';
     this.BIOMETRIC_TOKEN_KEY_BASE = 'biometric_token';
+    
+    // FIXED: Prevent race conditions with initialization state
     this.isInitialized = false;
+    this.initializationPromise = null;
+    this.currentUserId = null;
+    
+    // FIXED: Cache biometric info to prevent repeated hardware checks
+    this.biometricInfoCache = null;
+    this.cacheExpiry = null;
+    this.CACHE_DURATION = 30000; // 30 seconds cache
+    
+    // FIXED: Cleanup tracking
+    this.activeOperations = new Set();
+  }
+
+  // FIXED: Prevent concurrent initialization
+  async initialize() {
+    if (this.isInitialized) return true;
+    if (this.initializationPromise) return this.initializationPromise;
+    
+    this.initializationPromise = this._performInitialization();
+    return this.initializationPromise;
+  }
+
+  async _performInitialization() {
+    try {
+      console.log('🔧 Initializing BiometricService for platform:', Platform.OS);
+      
+      // Test basic LocalAuthentication availability
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      console.log('📱 Hardware available:', hasHardware);
+      
+      this.isInitialized = true;
+      this.initializationPromise = null;
+      return true;
+    } catch (error) {
+      console.error('❌ BiometricService initialization failed:', error);
+      this.initializationPromise = null;
+      return false;
+    }
   }
 
   // Helper function to generate user-specific keys
@@ -19,27 +58,14 @@ class BiometricService {
     return `${baseKey}_${userId}`;
   }
 
-  // Initialize service with proper error handling
-  async initialize() {
-    try {
-      if (this.isInitialized) return true;
-      
-      console.log('🔧 Initializing BiometricService for platform:', Platform.OS);
-      
-      // Test basic LocalAuthentication availability
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      console.log('📱 Hardware available:', hasHardware);
-      
-      this.isInitialized = true;
-      return true;
-    } catch (error) {
-      console.error('❌ BiometricService initialization failed:', error);
-      return false;
-    }
-  }
-
-  // Check if biometric authentication is available on device
+  // FIXED: Cached biometric availability check
   async isBiometricAvailable() {
+    // Check cache first
+    if (this.biometricInfoCache && this.cacheExpiry && Date.now() < this.cacheExpiry) {
+      console.log('🔄 Using cached biometric info');
+      return this.biometricInfoCache;
+    }
+
     try {
       await this.initialize();
       
@@ -47,13 +73,16 @@ class BiometricService {
       console.log('🔍 Hardware compatible:', compatible);
       
       if (!compatible) {
-        return {
+        const result = {
           available: false,
           hasHardware: false,
           isEnrolled: false,
           supportedTypes: [],
-          typeName: 'Biometric'
+          typeName: 'Biometric',
+          error: 'No biometric hardware available'
         };
+        this._setCachedBiometricInfo(result);
+        return result;
       }
 
       const enrolled = await LocalAuthentication.isEnrolledAsync();
@@ -62,16 +91,19 @@ class BiometricService {
       const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
       console.log('🎯 Supported types:', supportedTypes);
 
-      return {
+      const result = {
         available: compatible && enrolled,
         hasHardware: compatible,
         isEnrolled: enrolled,
         supportedTypes: supportedTypes,
         typeName: this.getBiometricTypeName(supportedTypes)
       };
+
+      this._setCachedBiometricInfo(result);
+      return result;
     } catch (error) {
       console.error('❌ Check biometric availability error:', error);
-      return {
+      const result = {
         available: false,
         hasHardware: false,
         isEnrolled: false,
@@ -79,24 +111,41 @@ class BiometricService {
         typeName: 'Biometric',
         error: error.message
       };
+      this._setCachedBiometricInfo(result, 5000); // Shorter cache for errors
+      return result;
     }
   }
 
-  // Get biometric type name for display - iOS SPECIFIC FIX
+  // FIXED: Cache management
+  _setCachedBiometricInfo(info, duration = this.CACHE_DURATION) {
+    this.biometricInfoCache = info;
+    this.cacheExpiry = Date.now() + duration;
+  }
+
+  _clearBiometricCache() {
+    this.biometricInfoCache = null;
+    this.cacheExpiry = null;
+  }
+
+  // FIXED: More robust biometric type detection
   getBiometricTypeName(supportedTypes) {
     try {
+      if (!Array.isArray(supportedTypes) || supportedTypes.length === 0) {
+        return 'Biometric';
+      }
+
       if (Platform.OS === 'ios') {
-        // iOS 13+ Face ID check
-        if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-          return 'Face ID';
-        } 
-        // iOS Touch ID check
-        else if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-          return 'Touch ID';
-        }
-        // iOS Optic ID (iPad Pro M4)
-        else if (supportedTypes.includes(LocalAuthentication.AuthenticationType.OPTIC_ID)) {
-          return 'Optic ID';
+        // FIXED: Handle newer iOS biometric types
+        const typeMap = {
+          [LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION]: 'Face ID',
+          [LocalAuthentication.AuthenticationType.FINGERPRINT]: 'Touch ID',
+          [LocalAuthentication.AuthenticationType.OPTIC_ID]: 'Optic ID' // iPad Pro M4
+        };
+
+        for (const type of supportedTypes) {
+          if (typeMap[type]) {
+            return typeMap[type];
+          }
         }
       } else {
         // Android biometric types
@@ -106,6 +155,7 @@ class BiometricService {
           return 'Face Recognition';
         }
       }
+      
       return 'Biometric';
     } catch (error) {
       console.error('Get biometric type error:', error);
@@ -122,6 +172,7 @@ class BiometricService {
       let isSetup = false;
 
       if (userId) {
+        this.currentUserId = userId;
         isSetup = await this.isBiometricSetup(userId);
       }
 
@@ -146,10 +197,13 @@ class BiometricService {
     }
   }
 
-  // iOS-SPECIFIC AUTHENTICATION FIX
+  // FIXED: Enhanced authentication with operation tracking
   async authenticateWithBiometric(reason = 'Authenticate to access your account') {
+    const operationId = Math.random().toString(36).substr(2, 9);
+    
     try {
-      console.log('🔐 Starting biometric authentication for iOS...');
+      console.log('🔐 Starting biometric authentication...', operationId);
+      this.activeOperations.add(operationId);
 
       const biometricStatus = await this.isBiometricAvailable();
       console.log('🔍 Biometric status:', biometricStatus);
@@ -162,16 +216,27 @@ class BiometricService {
         throw new Error(error);
       }
 
-      // iOS-SPECIFIC AUTHENTICATION OPTIONS - CRITICAL FIX
+      // FIXED: Better iOS authentication options
       const authOptions = {
         promptMessage: reason,
-        disableDeviceFallback: true, // IMPORTANT: Disable device PIN fallback
+        disableDeviceFallback: true, // Disable device PIN fallback
       };
 
-      // iOS-specific fallback configuration
+      // Platform-specific optimizations
       if (Platform.OS === 'ios') {
-        authOptions.fallbackLabel = ''; // Empty string to hide fallback button
+        authOptions.fallbackLabel = ''; // Hide fallback button
         authOptions.cancelLabel = 'Cancel';
+        
+        // FIXED: Handle specific iOS versions and capabilities
+        const iosVersion = Platform.Version;
+        if (iosVersion >= 15) {
+          authOptions.requireConfirmation = false; // Faster on iOS 15+
+        }
+      } else {
+        // Android-specific options
+        authOptions.promptMessage = reason;
+        authOptions.cancelLabel = 'Cancel';
+        authOptions.disableDeviceFallback = true;
       }
 
       console.log('🔐 Calling LocalAuthentication.authenticateAsync with options:', authOptions);
@@ -188,107 +253,78 @@ class BiometricService {
           biometricToken: sessionToken
         };
       } else {
-        // Handle different iOS error types
+        // Handle different error types
         return this.handleAuthenticationError(result);
       }
     } catch (error) {
       console.error('❌ Biometric authentication error:', error);
+      
+      // FIXED: Better error classification
+      if (error.message.includes('User cancel') || error.message.includes('cancelled')) {
+        return {
+          success: false,
+          cancelled: true,
+          error: 'Authentication was cancelled'
+        };
+      }
+      
       return {
         success: false,
         error: error.message || 'Biometric authentication failed'
       };
+    } finally {
+      this.activeOperations.delete(operationId);
     }
   }
 
-  // iOS-SPECIFIC ERROR HANDLING
+  // FIXED: Enhanced error handling
   handleAuthenticationError(result) {
     console.log('🔍 Handling authentication error:', result.error);
     
-    switch (result.error) {
-      case 'UserCancel':
-      case 'user_cancel':
-        return {
-          success: false,
-          cancelled: true,
-          error: 'Authentication was cancelled by user'
-        };
-      
-      case 'UserFallback':
-      case 'user_fallback':
-        return {
-          success: false,
-          fallback: true,
-          error: 'User chose fallback authentication'
-        };
-      
-      case 'SystemCancel':
-      case 'system_cancel':
-        return {
-          success: false,
-          cancelled: true,
-          error: 'Authentication was cancelled by the system'
-        };
-      
-      case 'BiometryNotAvailable':
-      case 'biometry_not_available':
-        return {
-          success: false,
-          error: 'Biometric authentication is not available on this device'
-        };
-      
-      case 'BiometryNotEnrolled':
-      case 'biometry_not_enrolled':
-        return {
-          success: false,
-          error: 'No biometric data is enrolled. Please set up Face ID or Touch ID in Settings'
-        };
-      
-      case 'BiometryLockout':
-      case 'biometry_lockout':
-        return {
-          success: false,
-          locked: true,
-          error: 'Biometric authentication is temporarily disabled due to too many failed attempts. Please wait or use your device passcode to unlock'
-        };
-      
-      case 'AuthenticationFailed':
-      case 'authentication_failed':
-        return {
-          success: false,
-          error: 'Authentication failed. Please try again'
-        };
-      
-      case 'InvalidContext':
-      case 'invalid_context':
-        return {
-          success: false,
-          error: 'Invalid authentication context'
-        };
-      
-      case 'NotInteractive':
-      case 'not_interactive':
-        return {
-          success: false,
-          error: 'Authentication requires user interaction'
-        };
-      
-      default:
-        return {
-          success: false,
-          error: this.getErrorMessage(result.error) || 'Biometric authentication failed'
-        };
-    }
+    // Create error mapping for better user experience
+    const errorMap = {
+      'UserCancel': { cancelled: true, error: 'Authentication was cancelled by user' },
+      'user_cancel': { cancelled: true, error: 'Authentication was cancelled' },
+      'UserFallback': { fallback: true, error: 'User chose fallback authentication' },
+      'user_fallback': { fallback: true, error: 'Fallback authentication selected' },
+      'SystemCancel': { cancelled: true, error: 'Authentication was cancelled by the system' },
+      'system_cancel': { cancelled: true, error: 'System cancelled authentication' },
+      'BiometryNotAvailable': { error: 'Biometric authentication is not available on this device' },
+      'biometry_not_available': { error: 'Biometric authentication unavailable' },
+      'BiometryNotEnrolled': { error: 'No biometric data is enrolled. Please set up Face ID or Touch ID in Settings' },
+      'biometry_not_enrolled': { error: 'No biometric data enrolled' },
+      'BiometryLockout': { 
+        locked: true, 
+        error: 'Biometric authentication is temporarily disabled due to too many failed attempts'
+      },
+      'biometry_lockout': { locked: true, error: 'Biometric authentication locked' },
+      'AuthenticationFailed': { error: 'Authentication failed. Please try again' },
+      'authentication_failed': { error: 'Authentication failed' }
+    };
+    
+    const errorInfo = errorMap[result.error] || { 
+      error: this.getErrorMessage(result.error) || 'Biometric authentication failed' 
+    };
+    
+    return {
+      success: false,
+      ...errorInfo
+    };
   }
 
-  // Setup biometric authentication for a user with iOS considerations
+  // Setup biometric authentication for a user
   async setupBiometric(userId) {
+    const operationId = Math.random().toString(36).substr(2, 9);
+    
     try {
       console.log('🔧 Setting up biometric for user:', userId);
+      this.activeOperations.add(operationId);
 
       if (!userId) {
         throw new Error('User ID is required to setup biometric authentication');
       }
 
+      this.currentUserId = userId;
       const biometricStatus = await this.isBiometricAvailable();
       console.log('🔍 Biometric status for setup:', biometricStatus);
       
@@ -300,7 +336,7 @@ class BiometricService {
         throw new Error(error);
       }
 
-      // Test biometric authentication first with iOS-optimized prompt
+      // Test biometric authentication first
       const authReason = Platform.OS === 'ios' 
         ? `Enable ${biometricStatus.typeName} for secure access to Akchabar`
         : 'Enable biometric authentication for secure access to Akchabar';
@@ -316,6 +352,9 @@ class BiometricService {
         
         await SecureStore.setItemAsync(biometricKey, 'true');
         await SecureStore.setItemAsync(tokenKey, authResult.biometricToken);
+
+        // Clear cache since setup status changed
+        this._clearBiometricCache();
 
         console.log('✅ Biometric setup completed for user:', userId);
         return { 
@@ -336,6 +375,8 @@ class BiometricService {
         success: false,
         error: error.message || 'Failed to setup biometric authentication'
       };
+    } finally {
+      this.activeOperations.delete(operationId);
     }
   }
 
@@ -358,8 +399,11 @@ class BiometricService {
 
   // Disable biometric authentication for a user
   async disableBiometric(userId) {
+    const operationId = Math.random().toString(36).substr(2, 9);
+    
     try {
       console.log('🔧 Disabling biometric for user:', userId);
+      this.activeOperations.add(operationId);
 
       if (!userId) {
         throw new Error('User ID is required to disable biometric authentication');
@@ -371,6 +415,9 @@ class BiometricService {
       await SecureStore.deleteItemAsync(biometricKey);
       await SecureStore.deleteItemAsync(tokenKey);
 
+      // Clear cache since setup status changed
+      this._clearBiometricCache();
+
       console.log('✅ Biometric disabled for user:', userId);
       return { success: true };
     } catch (error) {
@@ -379,10 +426,12 @@ class BiometricService {
         success: false,
         error: error.message || 'Failed to disable biometric authentication'
       };
+    } finally {
+      this.activeOperations.delete(operationId);
     }
   }
 
-  // Generate secure session token
+  // FIXED: Enhanced session token generation
   async generateSessionToken() {
     try {
       const timestamp = Date.now().toString();
@@ -391,7 +440,10 @@ class BiometricService {
         byte.toString(16).padStart(2, '0')
       ).join('');
       
-      const sessionData = `biometric_${timestamp}_${randomString}`;
+      // Include device info for additional entropy
+      const deviceInfo = Platform.OS + Platform.Version + (Platform.isPad ? 'pad' : 'phone');
+      const sessionData = `biometric_${timestamp}_${randomString}_${deviceInfo}`;
+      
       const token = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256, 
         sessionData
@@ -405,7 +457,7 @@ class BiometricService {
     }
   }
 
-  // Get iOS-specific error messages
+  // Get comprehensive error messages
   getErrorMessage(errorCode) {
     const errorMessages = {
       'UserCancel': 'Authentication was cancelled.',
@@ -415,61 +467,24 @@ class BiometricService {
       'SystemCancel': 'Authentication was cancelled by the system.',
       'system_cancel': 'Authentication was cancelled by the system.',
       'PasscodeNotSet': 'Device passcode is not set. Please set up a passcode in Settings.',
-      'passcode_not_set': 'Device passcode is not set. Please set up a passcode in Settings.',
+      'passcode_not_set': 'Device passcode is not set.',
       'BiometryNotAvailable': 'Biometric authentication is not available on this device.',
-      'biometry_not_available': 'Biometric authentication is not available on this device.',
+      'biometry_not_available': 'Biometric authentication is not available.',
       'BiometryNotEnrolled': 'No biometric data is enrolled. Please set up Face ID or Touch ID in Settings.',
-      'biometry_not_enrolled': 'No biometric data is enrolled. Please set up Face ID or Touch ID in Settings.',
+      'biometry_not_enrolled': 'No biometric data is enrolled.',
       'BiometryLockout': 'Biometric authentication is temporarily disabled. Please wait or use your device passcode.',
-      'biometry_lockout': 'Biometric authentication is temporarily disabled. Please wait or use your device passcode.',
+      'biometry_lockout': 'Biometric authentication is temporarily disabled.',
+      'AuthenticationFailed': 'Authentication failed. Please try again.',
+      'authentication_failed': 'Authentication failed.',
       'AppCancel': 'Authentication was cancelled by the app.',
       'app_cancel': 'Authentication was cancelled by the app.',
       'InvalidContext': 'Invalid authentication context.',
       'invalid_context': 'Invalid authentication context.',
       'NotInteractive': 'Authentication requires user interaction.',
-      'not_interactive': 'Authentication requires user interaction.',
-      'TouchIDNotAvailable': 'Touch ID is not available on this device.',
-      'touch_id_not_available': 'Touch ID is not available on this device.',
-      'TouchIDNotEnrolled': 'Touch ID is not set up. Please enable Touch ID in Settings.',
-      'touch_id_not_enrolled': 'Touch ID is not set up. Please enable Touch ID in Settings.',
-      'TouchIDLockout': 'Touch ID is temporarily disabled. Please wait or use your passcode.',
-      'touch_id_lockout': 'Touch ID is temporarily disabled. Please wait or use your passcode.',
-      'FaceIDNotAvailable': 'Face ID is not available on this device.',
-      'face_id_not_available': 'Face ID is not available on this device.',
-      'FaceIDNotEnrolled': 'Face ID is not set up. Please enable Face ID in Settings.',
-      'face_id_not_enrolled': 'Face ID is not set up. Please enable Face ID in Settings.',
-      'FaceIDLockout': 'Face ID is temporarily disabled. Please wait or use your passcode.',
-      'face_id_lockout': 'Face ID is temporarily disabled. Please wait or use your passcode.',
-      'AuthenticationFailed': 'Authentication failed. Please try again.',
-      'authentication_failed': 'Authentication failed. Please try again.'
+      'not_interactive': 'Authentication requires user interaction.'
     };
 
     return errorMessages[errorCode] || 'Biometric authentication failed. Please try again.';
-  }
-
-  // iOS Permission Check - NEW METHOD
-  async requestBiometricPermission() {
-    try {
-      if (Platform.OS !== 'ios') {
-        return { granted: true };
-      }
-
-      // On iOS, biometric permission is implicit through hardware/enrollment checks
-      const biometricInfo = await this.isBiometricAvailable();
-      
-      return {
-        granted: biometricInfo.available,
-        hasHardware: biometricInfo.hasHardware,
-        isEnrolled: biometricInfo.isEnrolled,
-        error: biometricInfo.error
-      };
-    } catch (error) {
-      console.error('❌ Request biometric permission error:', error);
-      return {
-        granted: false,
-        error: error.message
-      };
-    }
   }
 
   // Quick iOS compatibility check
@@ -479,6 +494,8 @@ class BiometricService {
     }
 
     try {
+      await this.initialize();
+      
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       if (!hasHardware) {
         return { supported: false, reason: 'No biometric hardware' };
@@ -505,10 +522,16 @@ class BiometricService {
     }
   }
 
-  // Emergency reset for development
+  // FIXED: Enhanced cleanup and emergency reset
   async emergencyReset(userId = null) {
     try {
       console.log('🚨 Emergency biometric reset for user:', userId || 'ALL');
+      
+      // Cancel any active operations
+      this.activeOperations.clear();
+      
+      // Clear cache
+      this._clearBiometricCache();
       
       if (userId) {
         // Reset for specific user
@@ -518,20 +541,23 @@ class BiometricService {
         await SecureStore.deleteItemAsync(biometricKey);
         await SecureStore.deleteItemAsync(tokenKey);
       } else {
-        // DANGEROUS: This won't work well without knowing all user IDs
-        console.warn('⚠️ Emergency reset without user ID - limited functionality');
+        // DANGEROUS: Nuclear option - try to clear all biometric keys
+        console.warn('⚠️ Emergency reset without user ID - attempting to clear all biometric keys');
         
-        // Try to clear common patterns (this won't get everything)
-        const commonKeys = [
-          'biometric_enabled', 'biometric_token'
-        ];
-        
-        for (const key of commonKeys) {
-          try {
-            await SecureStore.deleteItemAsync(key);
-          } catch (e) {
-            // Key might not exist, ignore
+        try {
+          // If SecureStore supports key enumeration
+          if (SecureStore.getAllKeysAsync) {
+            const allKeys = await SecureStore.getAllKeysAsync();
+            const biometricKeys = allKeys.filter(key => 
+              key.includes('biometric_enabled_') || key.includes('biometric_token_')
+            );
+            
+            for (const key of biometricKeys) {
+              await SecureStore.deleteItemAsync(key);
+            }
           }
+        } catch (error) {
+          console.error('Could not enumerate keys for reset:', error);
         }
       }
       
@@ -542,34 +568,7 @@ class BiometricService {
     }
   }
 
-  // Get biometric settings for a user
-  async getBiometricSettings(userId) {
-    try {
-      const deviceInfo = await this.isBiometricAvailable();
-      const isSetup = userId ? await this.isBiometricSetup(userId) : false;
-
-      return {
-        deviceSupported: deviceInfo.hasHardware,
-        deviceEnrolled: deviceInfo.isEnrolled,
-        appEnabled: isSetup,
-        biometricType: deviceInfo.typeName,
-        available: deviceInfo.available && isSetup,
-        error: deviceInfo.error
-      };
-    } catch (error) {
-      console.error('❌ Get biometric settings error:', error);
-      return {
-        deviceSupported: false,
-        deviceEnrolled: false,
-        appEnabled: false,
-        biometricType: 'Biometric',
-        available: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Validate biometric token (for API calls)
+  // Validate biometric token
   async validateBiometricToken(token, userId) {
     try {
       if (!token || !userId) return false;
@@ -584,22 +583,47 @@ class BiometricService {
     }
   }
 
-  // Quick check if biometric is ready to use (cached check)
+  // Quick readiness check with caching
   async isReadyToUse(userId) {
     try {
       if (!userId) return false;
       
-      // Quick check from cache if available
+      // Quick check from cache if available  
+      if (this.currentUserId === userId && this.biometricInfoCache?.isSetup !== undefined) {
+        return this.biometricInfoCache.isSetup && this.biometricInfoCache.available;
+      }
+      
       const isSetup = await this.isBiometricSetup(userId);
       if (!isSetup) return false;
       
-      // Basic hardware check
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      return hasHardware;
+      // Use cached hardware check if available
+      const biometricInfo = await this.isBiometricAvailable();
+      return biometricInfo.available;
     } catch (error) {
       console.error('❌ Ready to use check error:', error);
       return false;
     }
+  }
+
+  // Cleanup method to be called on app shutdown/user logout
+  cleanup() {
+    console.log('🧹 Cleaning up BiometricService');
+    this.activeOperations.clear();
+    this._clearBiometricCache();
+    this.currentUserId = null;
+    this.isInitialized = false;
+    this.initializationPromise = null;
+  }
+
+  // Get current service status (for debugging)
+  getServiceStatus() {
+    return {
+      isInitialized: this.isInitialized,
+      hasCache: !!this.biometricInfoCache,
+      cacheExpiry: this.cacheExpiry,
+      activeOperations: this.activeOperations.size,
+      currentUserId: this.currentUserId
+    };
   }
 }
 

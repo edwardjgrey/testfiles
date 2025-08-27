@@ -1,9 +1,9 @@
-// src/services/validationService.js - FIXED UK PHONE VALIDATION
+// src/services/validationService.js - FIXED VERSION
 import { Alert } from 'react-native';
 
 class ValidationService {
   
-  // Phone number validation - COMPREHENSIVE VERSION WITH FIXED UK SUPPORT
+  // Phone number validation - FIXED UK VALIDATION AND EDGE CASES
   static validatePhone(phone, countryCode = '+996', language = 'en') {
     if (!phone) {
       return { 
@@ -17,17 +17,19 @@ class ValidationService {
     // Sanitize phone (remove spaces, dashes, parentheses)
     let sanitizedPhone = phone.replace(/[\s\-\(\)\.]/g, '');
     
-    // SPECIAL HANDLING FOR UK NUMBERS - Remove country code if included
+    // FIXED: Proper UK number handling
     if (countryCode === '+44') {
-      // Remove +44 if present at start
+      // Remove +44 or 44 if present at start
       sanitizedPhone = sanitizedPhone.replace(/^(\+44|44)/, '');
-      // Remove leading 0 if present (UK mobile numbers start with 07)
+      // For UK, if starts with 0, remove it (standard format)
       if (sanitizedPhone.startsWith('0')) {
         sanitizedPhone = sanitizedPhone.substring(1);
       }
     } else {
       // For other countries, remove country code if included
-      sanitizedPhone = sanitizedPhone.replace(/^\+\d{1,4}/, '');
+      const countryCodeDigits = countryCode.replace('+', '');
+      const regex = new RegExp(`^(\\+?${countryCodeDigits})`);
+      sanitizedPhone = sanitizedPhone.replace(regex, '');
     }
     
     const cleanPhone = sanitizedPhone;
@@ -42,13 +44,12 @@ class ValidationService {
       };
     }
 
-    // Check for suspicious patterns
-    if (this.hasSuspiciousPhonePattern(cleanPhone)) {
+    // Check for suspicious patterns BEFORE country validation
+    const suspiciousCheck = this.checkSuspiciousPhonePattern(cleanPhone);
+    if (!suspiciousCheck.valid) {
       return { 
         valid: false, 
-        error: language === 'ru' ? 'Введите действительный номер телефона' :
-               language === 'ky' ? 'Жарактуу телефон номерин киргизиңиз' :
-               'Please enter a valid phone number' 
+        error: suspiciousCheck.error 
       };
     }
 
@@ -58,48 +59,69 @@ class ValidationService {
       return validation;
     }
 
-    return { valid: true, sanitized: cleanPhone, formatted: validation.formatted };
+    return { 
+      valid: true, 
+      sanitized: cleanPhone, 
+      formatted: validation.formatted,
+      fullNumber: countryCode + cleanPhone
+    };
   }
 
-  // FIXED: Country-specific phone validation with UK support
+  // FIXED: Improved country-specific phone validation
   static validatePhoneByCountry(phone, countryCode, language = 'en') {
     const validations = {
       '+996': { 
-        length: 9, 
+        lengths: [9], 
         format: 'XXX XXX XXX', 
         example: '555 123 456',
-        pattern: /^[2-9]\d{8}$/, // First digit 2-9, then 8 more digits
+        patterns: [
+          /^[2-9]\d{8}$/, // Standard format
+          /^0[1-9]\d{7}$/ // Alternative format with leading 0
+        ],
         name: language === 'ru' ? 'Кыргызстан' : language === 'ky' ? 'Кыргызстан' : 'Kyrgyzstan'
       },
       '+7': { 
-        length: 10, 
+        lengths: [10], 
         format: 'XXX XXX XX XX', 
         example: '555 123 45 67',
-        pattern: /^[3-9]\d{9}$/, // Russian mobile patterns
+        patterns: [
+          /^[39]\d{9}$/, // Mobile: 3xx, 9xx
+          /^[4-8]\d{9}$/ // Additional regional codes
+        ],
         name: language === 'ru' ? 'Россия/Казахстан' : language === 'ky' ? 'Россия/Казахстан' : 'Russia/Kazakhstan'
       }, 
       '+1': { 
-        length: 10, 
-        format: 'XXX XXX XXXX', 
-        example: '555 123 4567',
-        pattern: /^[2-9]\d{2}[2-9]\d{6}$/, // US/Canada format
+        lengths: [10], 
+        format: '(XXX) XXX-XXXX', 
+        example: '(555) 123-4567',
+        patterns: [
+          /^[2-9]\d{2}[2-9]\d{6}$/ // US/Canada format
+        ],
         name: language === 'ru' ? 'США/Канада' : language === 'ky' ? 'АКШ/Канада' : 'USA/Canada'
       }, 
       '+44': { 
-        // FIXED: UK accepts both 10 and 11 digits (without leading 0)
-        length: [10, 11], // Allow both lengths
+        lengths: [10, 11], // FIXED: Allow both lengths
         format: 'XXXX XXX XXX', 
         example: '7700 123 456',
-        // FIXED: UK mobile pattern - accepts both 10 and 11 digit formats
-        pattern: /^7[0-9]\d{8,9}$/, // UK mobile: 7X followed by 8-9 more digits
-        name: language === 'ru' ? 'Великобритания' : language === 'ky' ? 'Улуу Британия' : 'United Kingdom',
-        multipleFormats: true
+        patterns: [
+          // FIXED: Comprehensive UK mobile patterns
+          /^7[0-9]\d{8}$/, // Most UK mobiles: 7xxx xxx xxx (10 digits)
+          /^7[0-9]\d{9}$/, // Some UK mobiles: 7xxxx xxx xxx (11 digits)
+          /^[1-9]\d{8}$/, // UK landlines: 1xxx xxx xxx (10 digits)
+          /^[1-9]\d{9}$/, // UK landlines: 1xxxx xxx xxx (11 digits)
+          /^2\d{9}$/, // London: 20xx xxx xxxx (10 digits)
+          /^800\d{7}$/, // Freephone: 800 xxx xxxx (10 digits)
+          /^845\d{7}$/ // Local rate: 845 xxx xxxx (10 digits)
+        ],
+        name: language === 'ru' ? 'Великобритания' : language === 'ky' ? 'Улуу Британия' : 'United Kingdom'
       }, 
       '+992': { 
-        length: 9, 
+        lengths: [9], 
         format: 'XX XXX XXXX', 
         example: '55 123 4567',
-        pattern: /^[2-9]\d{8}$/, // Tajikistan format
+        patterns: [
+          /^[2-9]\d{8}$/ // Tajikistan format
+        ],
         name: language === 'ru' ? 'Таджикистан' : language === 'ky' ? 'Тажикстан' : 'Tajikistan'
       }
     };
@@ -115,49 +137,29 @@ class ValidationService {
                  'Phone number must be 7-15 digits long' 
         };
       }
-      return { valid: true, formatted: phone };
+      return { valid: true, formatted: this.formatPhoneNumber(phone, countryCode) };
     }
 
-    // FIXED: Check length - handle both single length and multiple lengths (UK case)
-    const expectedLengths = Array.isArray(config.length) ? config.length : [config.length];
-    if (!expectedLengths.includes(phone.length)) {
-      let lengthError;
-      
-      if (countryCode === '+44') {
-        // Special message for UK
-        lengthError = language === 'ru' ? 
-          `UK номер должен содержать 10 или 11 цифр (без 0 в начале). Примеры: "7700123456" или "07700123456"` :
-          language === 'ky' ?
-          `UK номери 10 же 11 сандан турушу керек (башында 0 жок). Мисалдар: "7700123456" же "07700123456"` :
-          `UK number must be 10 or 11 digits (without leading 0). Examples: "7700123456" or "07700123456"`;
-      } else {
-        lengthError = language === 'ru' ? 
-          `Номер телефона должен содержать ${config.length} цифр для ${config.name}. Пример: ${config.example}` :
-          language === 'ky' ?
-          `Телефон номери ${config.name} үчүн ${config.length} сандан турушу керек. Мисал: ${config.example}` :
-          `Phone number must be ${config.length} digits for ${config.name}. Example: ${config.example}`;
-      }
+    // FIXED: Check length against all allowed lengths
+    if (!config.lengths.includes(phone.length)) {
+      const lengthsList = config.lengths.join(' or ');
+      const lengthError = language === 'ru' ? 
+        `Номер телефона должен содержать ${lengthsList} цифр для ${config.name}. Пример: ${config.example}` :
+        language === 'ky' ?
+        `Телефон номери ${config.name} үчүн ${lengthsList} сандан турушу керек. Мисал: ${config.example}` :
+        `Phone number must be ${lengthsList} digits for ${config.name}. Example: ${config.example}`;
         
       return { valid: false, error: lengthError };
     }
 
-    // Check pattern if defined
-    if (config.pattern && !config.pattern.test(phone)) {
-      let formatError;
-      
-      if (countryCode === '+44') {
-        formatError = language === 'ru' ?
-          `UK номер должен начинаться с 7. Примеры: "7700123456", "7525224482"` :
-          language === 'ky' ?
-          `UK номери 7 менен башталышы керек. Мисалдар: "7700123456", "7525224482"` :
-          `UK number must start with 7. Examples: "7700123456", "7525224482"`;
-      } else {
-        formatError = language === 'ru' ?
-          `Неверный формат номера телефона для ${config.name}. Пример: ${config.example}` :
-          language === 'ky' ?
-          `${config.name} үчүн телефон номеринин форматы туура эмес. Мисал: ${config.example}` :
-          `Invalid phone number format for ${config.name}. Example: ${config.example}`;
-      }
+    // FIXED: Check against ALL patterns, not just one
+    const matchesPattern = config.patterns.some(pattern => pattern.test(phone));
+    if (!matchesPattern) {
+      const formatError = language === 'ru' ?
+        `Неверный формат номера телефона для ${config.name}. Пример: ${config.example}` :
+        language === 'ky' ?
+        `${config.name} үчүн телефон номеринин форматы туура эмес. Мисал: ${config.example}` :
+        `Invalid phone number format for ${config.name}. Example: ${config.example}`;
         
       return { valid: false, error: formatError };
     }
@@ -168,64 +170,154 @@ class ValidationService {
     return { valid: true, formatted };
   }
 
-  // FIXED: Format phone number with improved UK support
+  // FIXED: Improved phone number formatting
   static formatPhoneNumber(phone, countryCode) {
-    switch (countryCode) {
-      case '+996':
-      case '+992':
-        return phone.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
-      case '+7':
-        return phone.replace(/(\d{3})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4');
-      case '+1':
-        return phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
-      case '+44':
-        // FIXED: UK formatting - handle both 10 and 11 digit numbers
-        if (phone.length === 10) {
-          return phone.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
-        } else if (phone.length === 11) {
-          return phone.replace(/(\d{5})(\d{3})(\d{3})/, '$1 $2 $3');
+    const formatters = {
+      '+996': (num) => num.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3'),
+      '+992': (num) => num.replace(/(\d{2})(\d{3})(\d{4})/, '$1 $2 $3'),
+      '+7': (num) => num.replace(/(\d{3})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4'),
+      '+1': (num) => num.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3'),
+      '+44': (num) => {
+        // FIXED: Better UK formatting based on length and type
+        if (num.length === 10) {
+          if (num.startsWith('20')) {
+            // London number: 20XX XXX XXXX
+            return num.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
+          } else if (num.startsWith('7')) {
+            // Mobile: 7XXX XXX XXX
+            return num.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
+          } else {
+            // Other: XXXX XXX XXX
+            return num.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
+          }
+        } else if (num.length === 11) {
+          if (num.startsWith('7')) {
+            // Long mobile: 7XXXX XXX XXX
+            return num.replace(/(\d{5})(\d{3})(\d{3})/, '$1 $2 $3');
+          } else {
+            // Long landline: XXXXX XXX XXX
+            return num.replace(/(\d{5})(\d{3})(\d{3})/, '$1 $2 $3');
+          }
         }
-        return phone;
-      default:
-        return phone;
-    }
+        return num;
+      }
+    };
+
+    const formatter = formatters[countryCode];
+    return formatter ? formatter(phone) : phone;
   }
 
-  // Check for suspicious phone patterns
-  static hasSuspiciousPhonePattern(phone) {
+  // FIXED: More comprehensive suspicious pattern detection
+  static checkSuspiciousPhonePattern(phone) {
     // All same digits
-    if (/^(\d)\1+$/.test(phone)) return true;
+    if (/^(\d)\1+$/.test(phone)) {
+      return { valid: false, error: 'Phone number cannot be all the same digit' };
+    }
     
-    // Sequential numbers (123456789, 987654321)
-    if (this.hasSequentialDigits(phone)) return true;
+    // Sequential ascending numbers (123456789)
+    if (this.hasSequentialDigits(phone, 'ascending')) {
+      return { valid: false, error: 'Phone number cannot be sequential digits' };
+    }
     
-    // Common fake numbers
-    const fakeNumbers = [
+    // Sequential descending numbers (987654321)
+    if (this.hasSequentialDigits(phone, 'descending')) {
+      return { valid: false, error: 'Phone number cannot be sequential digits' };
+    }
+    
+    // Common test numbers
+    const testNumbers = [
       '1234567890', '0123456789', '9876543210',
       '1111111111', '2222222222', '3333333333',
-      '0000000000', '5555555555'
+      '0000000000', '5555555555', '1234567', '7777777',
+      '1234', '0000', '9999', '1111' // Short test patterns
     ];
     
-    return fakeNumbers.includes(phone);
+    if (testNumbers.includes(phone)) {
+      return { valid: false, error: 'Please enter a valid phone number' };
+    }
+
+    // Too many repeated digits (more than 3 consecutive)
+    if (/(\d)\1{3,}/.test(phone)) {
+      return { valid: false, error: 'Phone number has too many repeated digits' };
+    }
+
+    return { valid: true };
   }
 
-  // Email validation
+  // FIXED: More accurate sequential digit detection
+  static hasSequentialDigits(str, direction = 'ascending') {
+    if (str.length < 4) return false; // Need at least 4 digits to be suspicious
+    
+    let consecutiveCount = 0;
+    const threshold = 4; // 4 consecutive sequential digits is suspicious
+    
+    for (let i = 0; i < str.length - 1; i++) {
+      const current = parseInt(str[i]);
+      const next = parseInt(str[i + 1]);
+      
+      const isSequential = direction === 'ascending' 
+        ? (next === current + 1) 
+        : (next === current - 1);
+      
+      if (isSequential) {
+        consecutiveCount++;
+        if (consecutiveCount >= threshold - 1) { // -1 because we're counting gaps
+          return true;
+        }
+      } else {
+        consecutiveCount = 0; // Reset counter
+      }
+    }
+    
+    return false;
+  }
+
+  // Enhanced email validation
   static validateEmail(email) {
     if (!email) {
       return { valid: false, error: 'Email is required' };
     }
 
     const sanitizedEmail = email.toLowerCase().trim();
+    
+    // Check for obvious issues first
+    if (sanitizedEmail.length > 254) {
+      return { valid: false, error: 'Email address is too long' };
+    }
+    
+    if (sanitizedEmail.includes('..')) {
+      return { valid: false, error: 'Email cannot contain consecutive dots' };
+    }
+    
+    // More comprehensive email regex
     const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     
     if (!emailRegex.test(sanitizedEmail)) {
       return { valid: false, error: 'Please enter a valid email address' };
     }
 
+    // Check for common typos in domains
+    const commonTypos = {
+      'gmial.com': 'gmail.com',
+      'gmai.com': 'gmail.com',
+      'yahooo.com': 'yahoo.com',
+      'hotmial.com': 'hotmail.com',
+      'outlok.com': 'outlook.com'
+    };
+
+    const domain = sanitizedEmail.split('@')[1];
+    if (commonTypos[domain]) {
+      return { 
+        valid: false, 
+        error: `Did you mean ${sanitizedEmail.replace(domain, commonTypos[domain])}?`,
+        suggestion: sanitizedEmail.replace(domain, commonTypos[domain])
+      };
+    }
+
     return { valid: true, sanitized: sanitizedEmail };
   }
 
-  // Password validation
+  // Enhanced password validation with better strength calculation
   static validatePassword(password, confirmPassword = null) {
     if (!password) {
       return { valid: false, error: 'Password is required' };
@@ -235,40 +327,62 @@ class ValidationService {
       return { valid: false, error: 'Password must be at least 8 characters long' };
     }
 
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumbers = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    if (password.length > 128) {
+      return { valid: false, error: 'Password is too long (max 128 characters)' };
+    }
+
+    const checks = {
+      hasUpperCase: /[A-Z]/.test(password),
+      hasLowerCase: /[a-z]/.test(password),
+      hasNumbers: /\d/.test(password),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      hasNoSpaces: !/\s/.test(password)
+    };
+
+    if (!checks.hasNoSpaces) {
+      return { valid: false, error: 'Password cannot contain spaces' };
+    }
 
     let strength = 0;
-    const requirements = [];
+    const missing = [];
 
-    if (hasLowerCase) strength++;
-    else requirements.push('one lowercase letter');
+    if (checks.hasLowerCase) strength++; else missing.push('lowercase letter');
+    if (checks.hasUpperCase) strength++; else missing.push('uppercase letter');  
+    if (checks.hasNumbers) strength++; else missing.push('number');
+    if (checks.hasSpecialChar) strength++;
 
-    if (hasUpperCase) strength++;
-    else requirements.push('one uppercase letter');
-
-    if (hasNumbers) strength++;
-    else requirements.push('one number');
-
-    if (hasSpecialChar) strength++;
-
+    // Require at least 3 of the 4 criteria
     if (strength < 3) {
       return { 
         valid: false, 
-        error: `Password must contain at least: ${requirements.join(', ')}`,
+        error: `Password must contain at least: ${missing.slice(0, -strength + 3).join(', ')}`,
         strength: strength 
       };
     }
 
-    // Common weak passwords
-    const weakPasswords = [
-      'password', '12345678', 'qwerty123', 'password123', 'admin123'
+    // Check for common weak patterns
+    const weakPatterns = [
+      /(.)\1{2,}/, // 3 or more repeated characters
+      /123456|654321|qwerty|password/i, // Common sequences
+      /^[a-z]+\d+$/i, // Just letters followed by numbers
+      /^\d+[a-z]+$/i // Just numbers followed by letters
     ];
 
-    if (weakPasswords.includes(password.toLowerCase())) {
-      return { valid: false, error: 'This password is too common. Please choose a stronger password.' };
+    for (const pattern of weakPatterns) {
+      if (pattern.test(password)) {
+        return { valid: false, error: 'Password is too predictable. Please choose a stronger password.' };
+      }
+    }
+
+    // Enhanced common password check
+    const commonPasswords = [
+      'password', 'password123', '123456789', 'qwerty123', 'admin123',
+      'welcome123', 'password1', 'qwerty12', 'letmein123', 'monkey123',
+      'dragon123', 'master123', 'shadow123', 'sunshine123'
+    ];
+
+    if (commonPasswords.includes(password.toLowerCase())) {
+      return { valid: false, error: 'This password is too common. Please choose a unique password.' };
     }
 
     // Confirm password check
@@ -276,10 +390,19 @@ class ValidationService {
       return { valid: false, error: 'Passwords do not match' };
     }
 
-    return { valid: true, strength, sanitized: password };
+    // Calculate actual strength score (1-5)
+    let actualStrength = strength;
+    if (password.length >= 12) actualStrength += 0.5;
+    if (password.length >= 16) actualStrength += 0.5;
+    
+    return { 
+      valid: true, 
+      strength: Math.min(5, Math.round(actualStrength)),
+      sanitized: password 
+    };
   }
 
-  // Name validation
+  // Enhanced name validation with international support
   static validateName(name, fieldName = 'Name') {
     if (!name) {
       return { valid: false, error: `${fieldName} is required` };
@@ -287,37 +410,41 @@ class ValidationService {
 
     const sanitizedName = name.trim();
     
-    if (sanitizedName.length < 2) {
-      return { valid: false, error: `${fieldName} must be at least 2 characters long` };
+    if (sanitizedName.length < 1) {
+      return { valid: false, error: `${fieldName} cannot be empty` };
     }
-
+    
     if (sanitizedName.length > 50) {
       return { valid: false, error: `${fieldName} must be less than 50 characters` };
     }
 
-    // Only allow letters, spaces, hyphens, and apostrophes
-    const nameRegex = /^[a-zA-ZÀ-ÿ\s\-']+$/;
+    // Allow international characters, letters, spaces, hyphens, and apostrophes
+    const nameRegex = /^[\p{L}\p{M}\s\-'\.]+$/u;
     if (!nameRegex.test(sanitizedName)) {
-      return { valid: false, error: `${fieldName} can only contain letters, spaces, hyphens, and apostrophes` };
+      return { 
+        valid: false, 
+        error: `${fieldName} can only contain letters, spaces, hyphens, apostrophes, and periods` 
+      };
+    }
+
+    // Check for suspicious patterns
+    if (/^\s+$/.test(name)) {
+      return { valid: false, error: `${fieldName} cannot be only spaces` };
+    }
+
+    if (/^[-'\.]+$/.test(sanitizedName)) {
+      return { valid: false, error: `${fieldName} must contain at least one letter` };
+    }
+
+    // Check for repeated special characters
+    if (/[-'\.]{3,}/.test(sanitizedName)) {
+      return { valid: false, error: `${fieldName} has too many consecutive special characters` };
     }
 
     return { valid: true, sanitized: sanitizedName };
   }
 
-  // Check for sequential digits in any string
-  static hasSequentialDigits(str) {
-    for (let i = 0; i < str.length - 2; i++) {
-      const current = parseInt(str[i]);
-      const next1 = parseInt(str[i + 1]);
-      const next2 = parseInt(str[i + 2]);
-      
-      if (next1 === current + 1 && next2 === current + 2) return true;
-      if (next1 === current - 1 && next2 === current - 2) return true;
-    }
-    return false;
-  }
-
-  // Validate all registration data at once
+  // Comprehensive registration data validation
   static validateRegistrationData(authData) {
     const errors = {};
 
@@ -336,7 +463,7 @@ class ValidationService {
     }
 
     if (authData.password) {
-      const passwordValidation = this.validatePassword(authData.password);
+      const passwordValidation = this.validatePassword(authData.password, authData.confirmPassword);
       if (!passwordValidation.valid) {
         errors.password = passwordValidation.error;
       }
@@ -356,9 +483,81 @@ class ValidationService {
       }
     }
 
+    // Cross-field validation
+    if (authData.email && authData.phone) {
+      // Both provided - ensure consistency
+      const emailDomain = authData.email.split('@')[1];
+      const phoneCountry = authData.countryCode;
+      
+      // Basic sanity check - warn if email/phone countries don't align
+      const countryMismatches = {
+        '+7': ['ru', 'kz', 'russia', 'kazakhstan'],
+        '+996': ['kg', 'kyrgyzstan'],
+        '+44': ['uk', 'britain', 'england'],
+        '+1': ['us', 'usa', 'canada', 'com']
+      };
+      
+      const phoneCountries = countryMismatches[phoneCountry] || [];
+      const emailLooksLocal = phoneCountries.some(country => 
+        emailDomain.includes(country)
+      );
+      
+      // This is just a warning, not an error
+      if (phoneCountry && !emailLooksLocal && phoneCountry !== '+1') {
+        console.warn('Email domain and phone country might not match');
+      }
+    }
+
     return {
       valid: Object.keys(errors).length === 0,
-      errors
+      errors,
+      warnings: [] // Could add non-blocking warnings here
+    };
+  }
+
+  // NEW: Validation for financial data
+  static validateFinancialAmount(amount, currency = 'KGS', fieldName = 'Amount') {
+    if (amount === null || amount === undefined || amount === '') {
+      return { valid: false, error: `${fieldName} is required` };
+    }
+
+    const numAmount = parseFloat(amount);
+    
+    if (isNaN(numAmount)) {
+      return { valid: false, error: `${fieldName} must be a valid number` };
+    }
+
+    if (numAmount < 0) {
+      return { valid: false, error: `${fieldName} cannot be negative` };
+    }
+
+    // Currency-specific max amounts (reasonable limits)
+    const maxAmounts = {
+      'KGS': 10000000, // 10M som
+      'USD': 100000,   // 100K USD
+      'EUR': 100000,   // 100K EUR
+      'RUB': 10000000  // 10M rubles
+    };
+
+    const maxAmount = maxAmounts[currency] || 1000000;
+    
+    if (numAmount > maxAmount) {
+      return { 
+        valid: false, 
+        error: `${fieldName} cannot exceed ${maxAmount.toLocaleString()} ${currency}` 
+      };
+    }
+
+    // Check for suspicious amounts (all same digits, obvious fake amounts)
+    const amountStr = numAmount.toString();
+    if (/^(\d)\1+$/.test(amountStr.replace('.', ''))) {
+      return { valid: false, error: 'Please enter a realistic amount' };
+    }
+
+    return { 
+      valid: true, 
+      sanitized: numAmount,
+      formatted: numAmount.toLocaleString()
     };
   }
 }

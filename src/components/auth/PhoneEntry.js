@@ -1,5 +1,5 @@
-// src/components/auth/PhoneEntry.js - FIXED with proper validation
-import React, { useState, useEffect } from 'react';
+// src/components/auth/PhoneEntry.js - PERFORMANCE OPTIMIZED VERSION
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { globalStyles } from '../../styles/globalStyles';
 import { translations, countryCodes } from '../../utils/translations';
 import LanguageSelector from '../common/LanguageSelector';
-import ValidationService from '../../services/validationService'; // ADD THIS
+import ValidationService from '../../services/validationService';
+
+// FIXED: Memoized country item component to prevent re-renders
+const CountryOption = React.memo(({ country, isSelected, onSelect }) => (
+  <TouchableOpacity
+    style={[
+      globalStyles.countryOption,
+      {
+        borderBottomColor: '#374151',
+        backgroundColor: isSelected ? 'rgba(152, 221, 166, 0.1)' : 'transparent'
+      }
+    ]}
+    onPress={() => onSelect(country)}
+  >
+    <Text style={[globalStyles.countryOptionText, { 
+      color: isSelected ? '#98DDA6' : '#ffffff' 
+    }]}>
+      {country.flag} {country.code} {country.country}
+    </Text>
+  </TouchableOpacity>
+));
 
 const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhoneRegistration }) => {
   const t = translations[language];
@@ -28,16 +48,21 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
   const [showCountries, setShowCountries] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // ADD VALIDATION STATES
+  // FIXED: Debounced validation states
   const [phoneError, setPhoneError] = useState('');
   const [isValidPhone, setIsValidPhone] = useState(false);
-  const [validationTimer, setValidationTimer] = useState(null);
+  const [isValidating, setIsValidating] = useState(false);
   
-  // Safe country selection with guaranteed fallback
-  const selectedCountry = React.useMemo(() => {
+  // FIXED: Refs for cleanup and debouncing
+  const validationTimeoutRef = useRef(null);
+  const formatTimeoutRef = useRef(null);
+  const mountedRef = useRef(true);
+
+  // FIXED: Memoized selected country to prevent recalculation
+  const selectedCountry = useMemo(() => {
     const found = countryCodes.find(c => c.code === countryCode);
     if (!found) {
-      console.warn('⚠️ Country not found for code:', countryCode, 'using fallback');
+      console.warn('Country not found for code:', countryCode, 'using fallback');
       return countryCodes[0] || { 
         code: '+996', 
         country: 'Kyrgyzstan', 
@@ -48,128 +73,8 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
     return found;
   }, [countryCode]);
 
-  // Validate and format phone number when it changes
-  const handlePhoneChange = (text) => {
-    // First, format the phone number for display
-    const formattedPhone = formatPhone(text);
-    setPhone(formattedPhone);
-    
-    // Then validate the cleaned phone number
-    const cleanedPhone = text.replace(/\D/g, '');
-    validatePhoneNumber(cleanedPhone);
-  };
-
-  // Real-time phone validation with delayed error display
-  const validatePhoneNumber = (cleanPhone) => {
-    // Clear any existing timer
-    if (validationTimer) {
-      clearTimeout(validationTimer);
-    }
-
-    if (!cleanPhone) {
-      setPhoneError('');
-      setIsValidPhone(false);
-      return;
-    }
-
-    // Use ValidationService for comprehensive validation
-    const validation = ValidationService.validatePhone(cleanPhone, countryCode, language);
-    
-    if (validation.valid) {
-      setPhoneError('');
-      setIsValidPhone(true);
-      console.log('✅ Phone validation passed:', validation.formatted);
-    } else {
-      setIsValidPhone(false);
-      
-      // Check if it's a repeated number pattern - show error after 2-5 seconds
-      if (/^(\d)\1+$/.test(cleanPhone) && cleanPhone.length >= 6) {
-        const timer = setTimeout(() => {
-          setPhoneError(validation.error);
-          console.log('❌ Repeated pattern detected after delay:', validation.error);
-        }, Math.random() * (5000 - 2000) + 2000); // Random between 2-5 seconds
-        setValidationTimer(timer);
-      } else {
-        // For other errors, wait 2 seconds before showing
-        const timer = setTimeout(() => {
-          setPhoneError(validation.error);
-          console.log('❌ Phone validation failed after delay:', validation.error);
-        }, 2000);
-        setValidationTimer(timer);
-      }
-    }
-  };
-
-  // Validate country code on mount and changes
-  useEffect(() => {
-    if (!countryCode || countryCode === 'undefined' || !countryCodes.find(c => c.code === countryCode)) {
-      console.log('🔧 Fixing invalid country code:', countryCode);
-      setCountryCode('+996');
-    }
-    
-    // Re-validate phone when country changes
-    if (phone) {
-      const cleanPhone = phone.replace(/\D/g, '');
-      validatePhoneNumber(cleanPhone);
-    }
-  }, [countryCode]);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (validationTimer) {
-        clearTimeout(validationTimer);
-      }
-    };
-  }, [validationTimer]);
-
-  // Enhanced format phone with validation
-  const formatPhone = (text) => {
-    const digits = text.replace(/\D/g, '');
-    
-    // Ensure we have a valid country
-    if (!selectedCountry?.code) {
-      return digits;
-    }
-
-    // Limit input length based on country
-    const maxLength = selectedCountry.length || 15;
-    const limitedDigits = digits.substring(0, maxLength);
-    
-    switch (selectedCountry.code) {
-      case '+996':
-      case '+992':
-        const kg = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})$/);
-        if (!kg) return limitedDigits;
-        return [kg[1], kg[2], kg[3]].filter(Boolean).join(' ');
-        
-      case '+7':
-        const ru = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})$/);
-        if (!ru) return limitedDigits;
-        return [ru[1], ru[2], ru[3], ru[4]].filter(Boolean).join(' ');
-        
-      case '+1':
-        const us = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
-        if (!us) return limitedDigits;
-        let formatted = '';
-        if (us[1]) formatted += us[1];
-        if (us[2]) formatted += ` ${us[2]}`;
-        if (us[3]) formatted += ` ${us[3]}`;
-        return formatted;
-        
-      case '+44':
-        const uk = limitedDigits.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
-        if (!uk) return limitedDigits;
-        return [uk[1], uk[2], uk[3]].filter(Boolean).join(' ');
-        
-      default:
-        const generic = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
-        if (!generic) return limitedDigits;
-        return [generic[1], generic[2], generic[3]].filter(Boolean).join(' ');
-    }
-  };
-
-  const getPlaceholder = () => {
+  // FIXED: Memoized placeholder to prevent recalculation
+  const placeholder = useMemo(() => {
     const formats = {
       '+996': '555 123 456',
       '+992': '555 123 456', 
@@ -178,16 +83,171 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
       '+44': '7700 900 123',
     };
     return formats[selectedCountry?.code] || '555 123 456';
-  };
+  }, [selectedCountry?.code]);
 
-  // Enhanced handleNext with comprehensive validation
-  const handleNext = async () => {
-    console.log('📱 Starting phone validation...');
+  // FIXED: Debounced validation function
+  const validatePhoneNumber = useCallback((cleanPhone) => {
+    // Clear existing timeout
+    if (validationTimeoutRef.current) {
+      clearTimeout(validationTimeoutRef.current);
+    }
+
+    // Clear error immediately for empty input
+    if (!cleanPhone) {
+      setPhoneError('');
+      setIsValidPhone(false);
+      setIsValidating(false);
+      return;
+    }
+
+    setIsValidating(true);
+
+    // Debounce validation by 500ms
+    validationTimeoutRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
+
+      try {
+        const validation = ValidationService.validatePhone(cleanPhone, countryCode, language);
+        
+        if (validation.valid) {
+          setPhoneError('');
+          setIsValidPhone(true);
+          console.log('Phone validation passed:', validation.formatted);
+        } else {
+          setIsValidPhone(false);
+          setPhoneError(validation.error);
+          console.log('Phone validation failed:', validation.error);
+        }
+      } catch (error) {
+        console.error('Validation error:', error);
+        setIsValidPhone(false);
+        setPhoneError('Validation error');
+      } finally {
+        if (mountedRef.current) {
+          setIsValidating(false);
+        }
+      }
+    }, 500); // 500ms debounce
+  }, [countryCode, language]);
+
+  // FIXED: Debounced phone formatting
+  const formatPhone = useCallback((text) => {
+    // Clear existing timeout
+    if (formatTimeoutRef.current) {
+      clearTimeout(formatTimeoutRef.current);
+    }
+
+    const digits = text.replace(/\D/g, '');
+    
+    // Immediate formatting for better UX, but debounced for validation
+    if (!selectedCountry?.code) {
+      return digits;
+    }
+
+    // Limit input length based on country
+    const maxLength = selectedCountry.length || 15;
+    const limitedDigits = digits.substring(0, maxLength);
+    
+    let formatted;
+    switch (selectedCountry.code) {
+      case '+996':
+      case '+992':
+        const kg = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})$/);
+        if (!kg) return limitedDigits;
+        formatted = [kg[1], kg[2], kg[3]].filter(Boolean).join(' ');
+        break;
+        
+      case '+7':
+        const ru = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})$/);
+        if (!ru) return limitedDigits;
+        formatted = [ru[1], ru[2], ru[3], ru[4]].filter(Boolean).join(' ');
+        break;
+        
+      case '+1':
+        const us = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+        if (!us) return limitedDigits;
+        let result = '';
+        if (us[1]) result += us[1];
+        if (us[2]) result += ` ${us[2]}`;
+        if (us[3]) result += ` ${us[3]}`;
+        formatted = result;
+        break;
+        
+      case '+44':
+        const uk = limitedDigits.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
+        if (!uk) return limitedDigits;
+        formatted = [uk[1], uk[2], uk[3]].filter(Boolean).join(' ');
+        break;
+        
+      default:
+        const generic = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+        if (!generic) return limitedDigits;
+        formatted = [generic[1], generic[2], generic[3]].filter(Boolean).join(' ');
+    }
+
+    // Debounce validation call
+    formatTimeoutRef.current = setTimeout(() => {
+      if (mountedRef.current) {
+        validatePhoneNumber(limitedDigits);
+      }
+    }, 100); // Quick debounce for formatting
+
+    return formatted;
+  }, [selectedCountry, validatePhoneNumber]);
+
+  // FIXED: Optimized phone change handler
+  const handlePhoneChange = useCallback((text) => {
+    const formattedPhone = formatPhone(text);
+    setPhone(formattedPhone);
+  }, [formatPhone]);
+
+  // Re-validate when country changes
+  useEffect(() => {
+    if (!countryCode || countryCode === 'undefined' || !countryCodes.find(c => c.code === countryCode)) {
+      console.log('Fixing invalid country code:', countryCode);
+      setCountryCode('+996');
+    }
+    
+    // Re-validate phone when country changes
+    if (phone) {
+      const cleanPhone = phone.replace(/\D/g, '');
+      validatePhoneNumber(cleanPhone);
+    }
+  }, [countryCode, phone, validatePhoneNumber]);
+
+  // FIXED: Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      if (validationTimeoutRef.current) {
+        clearTimeout(validationTimeoutRef.current);
+      }
+      if (formatTimeoutRef.current) {
+        clearTimeout(formatTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // FIXED: Memoized country selection handler
+  const handleCountrySelect = useCallback((country) => {
+    console.log('Country selected:', country.code, country.country);
+    setCountryCode(country.code);
+    
+    // Clear phone and validation when country changes
+    setPhone('');
+    setPhoneError('');
+    setIsValidPhone(false);
+    setShowCountries(false);
+  }, []);
+
+  // FIXED: Optimized submit handler
+  const handleNext = useCallback(async () => {
+    console.log('Starting phone validation...');
     
     // Get clean phone number
     const cleanPhone = phone.replace(/\D/g, '');
     
-    // Comprehensive validation
+    // Final validation before submission
     const phoneValidation = ValidationService.validatePhone(cleanPhone, countryCode, language);
     
     if (!phoneValidation.valid) {
@@ -213,23 +273,10 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
       return;
     }
 
-    // Check for suspicious patterns (all same digits, etc.)
-    if (/^(\d)\1+$/.test(cleanPhone)) {
-      Alert.alert(
-        language === 'ru' ? 'Неверный номер телефона' : 
-        language === 'ky' ? 'Туура эмес телефон номери' : 
-        'Invalid Phone Number', 
-        language === 'ru' ? 'Введите действительный номер телефона. Все цифры не могут быть одинаковыми.' :
-        language === 'ky' ? 'Жарактуу телефон номерин киргизиңиз. Бардык сандар бирдей боло албайт.' :
-        'Please enter a valid phone number. All digits cannot be the same.'
-      );
-      return;
-    }
-
     // Ensure country code is never undefined
     const safeCountryCode = countryCode && countryCode !== 'undefined' ? countryCode : '+996';
     
-    console.log('✅ Phone validation passed:', {
+    console.log('Phone validation passed:', {
       original: phone,
       clean: cleanPhone,
       formatted: phoneValidation.formatted,
@@ -263,19 +310,17 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
     } finally {
       setLoading(false);
     }
-  };
+  }, [phone, countryCode, language, handlePhoneRegistration, navigateAuth]);
 
-  // Safe country selection handler
-  const handleCountrySelect = (country) => {
-    console.log('🏳️ Country selected:', country.code, country.country);
-    setCountryCode(country.code);
-    
-    // Clear phone and validation when country changes
-    setPhone('');
-    setPhoneError('');
-    setIsValidPhone(false);
-    setShowCountries(false);
-  };
+  // FIXED: Memoized navigation handler
+  const handleGoBack = useCallback(() => {
+    navigateAuth('welcome');
+  }, [navigateAuth]);
+
+  // FIXED: Memoized country modal toggle
+  const toggleCountriesModal = useCallback(() => {
+    setShowCountries(prev => !prev);
+  }, []);
 
   return (
     <SafeAreaView style={[globalStyles.authContainer, { 
@@ -295,7 +340,7 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
             borderRadius: 12,
             padding: 12
           }]}
-          onPress={() => navigateAuth('welcome')}
+          onPress={handleGoBack}
         >
           <Ionicons name="arrow-back" size={22} color="#ffffff" />
         </TouchableOpacity>
@@ -322,7 +367,7 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
               style={[globalStyles.phoneCountry, {
                 borderRightColor: '#4b5563',
               }]}
-              onPress={() => setShowCountries(!showCountries)}
+              onPress={toggleCountriesModal}
             >
               <Text style={[globalStyles.flagText, { fontSize: 18 }]}>
                 {selectedCountry?.flag || '🇰🇬'}
@@ -338,23 +383,28 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
                 color: '#ffffff',
                 fontSize: 17,
               }]}
-              placeholder={getPlaceholder()}
+              placeholder={placeholder}
               placeholderTextColor="#69696988"
               value={phone}
-              onChangeText={handlePhoneChange} // Use enhanced handler
+              onChangeText={handlePhoneChange}
               keyboardType="phone-pad"
               autoCorrect={false}
               autoCapitalize="none"
+              maxLength={selectedCountry?.length ? selectedCountry.length + 3 : 20} // +3 for spaces
             />
             
             {/* Validation indicator */}
             {phone.length > 0 && (
               <View style={{ paddingRight: 12, paddingLeft: 8 }}>
-                <Ionicons 
-                  name={isValidPhone ? "checkmark-circle" : "close-circle"} 
-                  size={20} 
-                  color={isValidPhone ? "#98DDA6" : "#ef4444"} 
-                />
+                {isValidating ? (
+                  <Ionicons name="ellipsis-horizontal" size={20} color="#9ca3af" />
+                ) : (
+                  <Ionicons 
+                    name={isValidPhone ? "checkmark-circle" : "close-circle"} 
+                    size={20} 
+                    color={isValidPhone ? "#98DDA6" : "#ef4444"} 
+                  />
+                )}
               </View>
             )}
           </View>
@@ -397,20 +447,12 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
                 </Text>
                 <ScrollView>
                   {countryCodes.map((country, index) => (
-                    <TouchableOpacity
+                    <CountryOption
                       key={`${country.code}-${index}`}
-                      style={[globalStyles.countryOption, {
-                        borderBottomColor: '#374151',
-                        backgroundColor: countryCode === country.code ? 'rgba(152, 221, 166, 0.1)' : 'transparent'
-                      }]}
-                      onPress={() => handleCountrySelect(country)}
-                    >
-                      <Text style={[globalStyles.countryOptionText, { 
-                        color: countryCode === country.code ? '#98DDA6' : '#ffffff' 
-                      }]}>
-                        {country.flag} {country.code} {country.country}
-                      </Text>
-                    </TouchableOpacity>
+                      country={country}
+                      isSelected={countryCode === country.code}
+                      onSelect={handleCountrySelect}
+                    />
                   ))}
                 </ScrollView>
               </View>
@@ -444,4 +486,4 @@ const PhoneEntry = ({ authData, language, setLanguage, navigateAuth, handlePhone
   );
 };
 
-export default PhoneEntry;
+export default React.memo(PhoneEntry);

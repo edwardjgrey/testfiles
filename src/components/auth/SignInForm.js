@@ -1,4 +1,4 @@
-// src/components/auth/SignInForm.js - COMPLETE FIXED VERSION
+// src/components/auth/SignInForm.js - FIXED undefined countryCode bug
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -30,8 +30,14 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
   const [email, setEmail] = useState(authData?.email || '');
   const [phone, setPhone] = useState(authData?.phone || '');
   
-  // FIX: Ensure countryCode is never undefined
-  const [countryCode, setCountryCode] = useState(authData?.countryCode || '+996');
+  // FIXED: Ensure countryCode is never undefined with proper validation
+  const [countryCode, setCountryCode] = useState(() => {
+    const initial = authData?.countryCode || '+996';
+    // Validate that the country code exists in our countryCodes array
+    const exists = countryCodes.find(c => c.code === initial);
+    return exists ? initial : '+996'; // Default to Kyrgyzstan if invalid
+  });
+  
   const [showCountries, setShowCountries] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -60,6 +66,14 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
     }
   }, [authData]);
 
+  // FIXED: Add validation when countryCode changes to prevent undefined issues
+  useEffect(() => {
+    if (!countryCode || countryCode === 'undefined' || !countryCodes.find(c => c.code === countryCode)) {
+      console.log('🔧 Fixing invalid country code:', countryCode);
+      setCountryCode('+996');
+    }
+  }, [countryCode]);
+
   const checkBiometricStatus = async () => {
     try {
       const biometricInfo = await BiometricService.getBiometricInfo();
@@ -71,60 +85,71 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
     }
   };
 
-  // FIX: Get selected country safely with fallback
-  const selectedCountry = countryCodes.find(c => c.code === countryCode) || countryCodes[0] || {
-    code: '+996',
-    country: 'Kyrgyzstan',
-    flag: '🇰🇬',
-    format: 'XXX XXX XXX',
-    length: 9
-  };
+  // FIXED: Get selected country safely with fallback and validation
+  const selectedCountry = React.useMemo(() => {
+    const found = countryCodes.find(c => c.code === countryCode);
+    if (!found) {
+      console.warn('⚠️ Country not found for code:', countryCode, 'using fallback');
+      return countryCodes[0] || {
+        code: '+996',
+        country: 'Kyrgyzstan',
+        flag: '🇰🇬',
+        format: 'XXX XXX XXX',
+        length: 9
+      };
+    }
+    return found;
+  }, [countryCode]);
 
-  // FIX: Format phone number safely
+  // FIXED: Format phone number safely with validation
   const formatPhone = (text, selectedCountry) => {
     const digits = text.replace(/\D/g, '');
     
-    // FIX: Handle undefined selectedCountry
+    // FIXED: Handle undefined selectedCountry
     if (!selectedCountry || !selectedCountry.code) {
       return digits;
     }
+    
+    // Limit input length based on country
+    const maxLength = selectedCountry.length || 15;
+    const limitedDigits = digits.substring(0, maxLength);
     
     // Format based on country
     switch (selectedCountry.code) {
       case '+996': // Kyrgyzstan - 9 digits: XXX XXX XXX
       case '+992': // Tajikistan - 9 digits
-        const kg = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})$/);
-        if (!kg) return digits;
+        const kg = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})$/);
+        if (!kg) return limitedDigits;
         return [kg[1], kg[2], kg[3]].filter(Boolean).join(' ');
         
-      case '+44': // UK - 11 digits: XXXX XXX XXXX
-        const uk = digits.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
-        if (!uk) return digits;
+      case '+44': // UK - 10-11 digits: XXXX XXX XXX
+        const uk = limitedDigits.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
+        if (!uk) return limitedDigits;
         return [uk[1], uk[2], uk[3]].filter(Boolean).join(' ');
         
-      case '+1': // USA - 10 digits: (XXX) XXX-XXXX
-        const us = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
-        if (!us) return digits;
+      case '+1': // USA - 10 digits: XXX XXX XXXX
+        const us = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+        if (!us) return limitedDigits;
         let formatted = '';
-        if (us[1]) formatted += `(${us[1]}`;
-        if (us[2]) formatted += `) ${us[2]}`;
-        if (us[3]) formatted += `-${us[3]}`;
+        if (us[1]) formatted += us[1];
+        if (us[2]) formatted += ` ${us[2]}`;
+        if (us[3]) formatted += ` ${us[3]}`;
         return formatted;
         
-      case '+7': // Russia/Kazakhstan - 10 digits: XXX XXX-XX-XX
-        const ru = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})$/);
-        if (!ru) return digits;
+      case '+7': // Russia/Kazakhstan - 10 digits: XXX XXX XX XX
+        const ru = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})$/);
+        if (!ru) return limitedDigits;
         return [ru[1], ru[2], ru[3], ru[4]].filter(Boolean).join(' ');
         
       default:
         // Generic format for other countries
-        const generic = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
-        if (!generic) return digits;
+        const generic = limitedDigits.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+        if (!generic) return limitedDigits;
         return [generic[1], generic[2], generic[3]].filter(Boolean).join(' ');
     }
   };
 
-  // FIX: Handle sign in with proper country code handling
+  // FIXED: Handle sign in with proper country code validation
   const handleSignIn = async () => {
     try {
       setLoading(true);
@@ -150,15 +175,23 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
           }
         }
       } else {
-        // PHONE SIGN IN - FIX THE COUNTRY CODE ISSUE
+        // PHONE SIGN IN - FIXED: Ensure countryCode is never undefined
         if (!phone) {
           Alert.alert('Error', 'Please enter your phone number');
           return;
         }
         
-        // FIX: Ensure countryCode is properly set
-        const finalCountryCode = countryCode || '+996';
+        // FIXED: Ensure countryCode is properly validated and set
+        const finalCountryCode = countryCode && countryCode !== 'undefined' ? countryCode : '+996';
         const cleanPhone = phone.replace(/\s/g, '');
+        
+        // Additional validation to ensure we have a valid country code
+        const validCountry = countryCodes.find(c => c.code === finalCountryCode);
+        if (!validCountry) {
+          console.error('❌ Invalid country code detected:', finalCountryCode);
+          Alert.alert('Error', 'Invalid country code. Please select a valid country.');
+          return;
+        }
         
         console.log('📱 Processing phone sign-in for:', finalCountryCode + cleanPhone);
         
@@ -179,6 +212,23 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
     } finally {
       setLoading(false);
     }
+  };
+
+  // FIXED: Safe country selection handler with validation
+  const handleCountrySelect = (country) => {
+    console.log('🏳️ Country selected:', country.code, country.country);
+    
+    // Validate the selected country
+    if (!country || !country.code || !country.country) {
+      console.error('❌ Invalid country selected:', country);
+      return;
+    }
+    
+    setCountryCode(country.code);
+    
+    // Clear phone and validation when country changes
+    setPhone('');
+    setShowCountries(false);
   };
 
   const handleBiometricSignIn = async () => {
@@ -665,7 +715,7 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                   {t.phoneNumber || 'Phone Number'}
                 </Text>
                 
-                {/* FIX: Phone input with proper country picker */}
+                {/* FIXED: Phone input with proper country picker and validation */}
                 <View style={globalStyles.phoneInputContainer}>
                   <TouchableOpacity
                     style={globalStyles.phoneCountry}
@@ -710,13 +760,9 @@ const SignInForm = ({ language, setLanguage, navigateAuth, completeAuth, authDat
                     <ScrollView>
                       {countryCodes.map((country, index) => (
                         <TouchableOpacity
-                          key={index}
+                          key={`${country.code}-${index}`} // FIXED: Ensure unique keys
                           style={globalStyles.countryOption}
-                          onPress={() => {
-                            console.log('🏳️ Country selected:', country.code, country.country);
-                            setCountryCode(country.code);
-                            setShowCountries(false);
-                          }}
+                          onPress={() => handleCountrySelect(country)}
                         >
                           <Text style={globalStyles.countryOptionText}>
                             {country.flag} {country.code} {country.country}
