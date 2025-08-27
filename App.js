@@ -1,7 +1,8 @@
-// App.js - COMPLETE FIXED VERSION
+// App.js - COMPLETE FIXED VERSION - User Authentication Flow Fixed
 import React, { useState, useEffect } from 'react';
 import { StatusBar, Alert, View, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import components
 import OnboardingFlow from './src/components/onboarding/OnboardingFlow';
@@ -35,6 +36,47 @@ export default function App() {
   const [language, setLanguage] = useState('en');
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [initializationComplete, setInitializationComplete] = useState(false);
+
+  // Load saved language preference on app start
+  useEffect(() => {
+    loadLanguagePreference();
+  }, []);
+
+  // Save language preference when it changes
+  useEffect(() => {
+    saveLanguagePreference(language);
+  }, [language]);
+
+  // Language persistence functions
+  const loadLanguagePreference = async () => {
+    try {
+      const savedLanguage = await AsyncStorage.getItem('userLanguage');
+      if (savedLanguage && ['en', 'ru', 'ky'].includes(savedLanguage)) {
+        console.log('📍 Loading saved language:', savedLanguage);
+        setLanguage(savedLanguage);
+      } else {
+        console.log('📍 No saved language found, using default: en');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load language preference:', error);
+    }
+  };
+
+  const saveLanguagePreference = async (newLanguage) => {
+    try {
+      await AsyncStorage.setItem('userLanguage', newLanguage);
+      console.log('💾 Language preference saved:', newLanguage);
+    } catch (error) {
+      console.error('❌ Failed to save language preference:', error);
+    }
+  };
+
+  // Enhanced setLanguage function that persists the choice
+  const updateLanguage = (newLanguage) => {
+    console.log('🌍 Language changed to:', newLanguage);
+    setLanguage(newLanguage);
+  };
   
   // Security State
   const [pinSetupRequired, setPinSetupRequired] = useState(false);
@@ -86,15 +128,21 @@ export default function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        console.log('🚀 Starting app initialization...');
+        
         // Check for existing authentication
         await checkExistingAuth();
         
         // Test backend connection (non-blocking)
         testBackendConnection();
         
+        console.log('✅ App initialization complete');
+        
       } catch (error) {
+        console.error('❌ App initialization failed:', error);
         // Don't block the app if initialization fails
         setIsLoading(false);
+        setInitializationComplete(true);
       }
     };
 
@@ -105,7 +153,9 @@ export default function App() {
   const testBackendConnection = async () => {
     try {
       const response = await ApiService.testConnection();
+      console.log('🌐 Backend connection test successful');
     } catch (error) {
+      console.error('🌐 Backend connection test failed:', error);
       // Show connection error after a delay, but don't block the app
       setTimeout(() => {
         Alert.alert(
@@ -120,47 +170,83 @@ export default function App() {
     }
   };
 
-  // Enhanced checkExistingAuth function with security checks
+  // Enhanced checkExistingAuth function with security checks - FIXED VERSION
   const checkExistingAuth = async () => {
     try {
+      console.log('🔐 Checking existing authentication...');
       setIsLoading(true);
       
       // First check if we have a token
       const token = await ApiService.getToken();
+      console.log('🎫 Token exists:', !!token);
       
       if (!token) {
+        console.log('❌ No token found - user needs to authenticate');
+        setIsLoading(false);
+        setInitializationComplete(true);
         return;
       }
       
       // Validate the token with the backend
+      console.log('🔍 Validating token with backend...');
       const response = await ApiService.validateToken();
       
       if (response.success && response.user) {
+        console.log('✅ Token validation successful, user:', response.user);
+        
+        // CRITICAL: Set user data FIRST before any security checks
         setUser(response.user);
         setIsAuthenticated(true);
         setHasSeenOnboarding(true);
         
+        // Restore user's language preference if available
+        if (response.user.language && ['en', 'ru', 'ky'].includes(response.user.language)) {
+          console.log('🌍 Restoring user language preference:', response.user.language);
+          setLanguage(response.user.language);
+        }
+        
         // Set the current user ID in SecurityService
         SecurityService.setCurrentUser(response.user.id);
+        console.log('🔐 SecurityService user ID set to:', response.user.id);
         
-        // Check security setup after successful auth
-        await checkSecuritySetup(response.user.id);
+        // IMPORTANT: Wait a bit for state to settle before security check
+        setTimeout(async () => {
+          console.log('🔒 Starting security setup check for authenticated user...');
+          await checkSecuritySetup(response.user.id);
+          setInitializationComplete(true);
+        }, 100);
+        
       } else {
+        console.log('❌ Token validation failed:', response);
         // Clear invalid token
         await ApiService.removeToken();
+        setIsLoading(false);
+        setInitializationComplete(true);
       }
     } catch (error) {
+      console.error('❌ checkExistingAuth error:', error);
       // If there's any error, clear the auth state and let user start fresh
       await ApiService.removeToken();
-    } finally {
+      setUser(null);
+      setIsAuthenticated(false);
       setIsLoading(false);
+      setInitializationComplete(true);
     }
   };
 
-  // Check security setup - FIXED VERSION
+  // Check security setup - ENHANCED VERSION WITH BETTER LOGGING
   const checkSecuritySetup = async (userId) => {
     try {
       console.log('🔍 Checking security setup for user:', userId);
+      
+      if (!userId) {
+        console.error('❌ No userId provided to checkSecuritySetup');
+        setPinSetupRequired(true);
+        setPinAuthRequired(false);
+        setSecuritySetupComplete(false);
+        setIsLoading(false);
+        return;
+      }
       
       // Ensure SecurityService has the correct user ID
       SecurityService.setCurrentUser(userId);
@@ -185,6 +271,13 @@ export default function App() {
         setPinAuthRequired(true);  // ALWAYS require PIN auth for existing users
         setSecuritySetupComplete(false);
       }
+      
+      console.log('🎯 Security state set:', {
+        pinSetupRequired: !securityStatus.pinSetup,
+        pinAuthRequired: securityStatus.pinSetup && !securityStatus.isLockedOut,
+        securitySetupComplete: false
+      });
+      
     } catch (error) {
       console.error('❌ Security check failed:', error);
       // If security check fails, assume new user needs PIN setup
@@ -192,11 +285,14 @@ export default function App() {
       setPinSetupRequired(true);
       setPinAuthRequired(false);
       setSecuritySetupComplete(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Handle successful PIN setup
   const handlePinSetupComplete = async () => {
+    console.log('✅ PIN setup completed');
     setPinSetupRequired(false);
     setPinAuthRequired(false);
     setSecuritySetupComplete(true);
@@ -204,6 +300,7 @@ export default function App() {
 
   // Handle successful PIN authentication
   const handlePinAuthSuccess = async () => {
+    console.log('✅ PIN authentication successful');
     setPinSetupRequired(false);
     setPinAuthRequired(false);
     setSecuritySetupComplete(true);
@@ -287,14 +384,19 @@ export default function App() {
       const result = await ApiService.signInWithEmail(email, password);
       
       if (result.success) {
+        console.log('✅ Email sign-in successful, user:', result.user);
+        
+        // CRITICAL: Set user data FIRST
         setUser(result.user);
         setIsAuthenticated(true);
         
         // Set the user ID in SecurityService
         SecurityService.setCurrentUser(result.user.id);
         
-        // Check security setup after successful sign-in
-        await checkSecuritySetup(result.user.id);
+        // Wait for state to settle before security check
+        setTimeout(async () => {
+          await checkSecuritySetup(result.user.id);
+        }, 100);
         
         Alert.alert('Welcome Back!', 'Successfully signed in to your account.');
       } else {
@@ -439,7 +541,7 @@ export default function App() {
     );
   };
 
-  // Handle verification for both registration and sign-in - FIXED VERSION
+  // Handle verification for both registration and sign-in - ENHANCED VERSION
   const handleCodeVerification = async (code) => {
     try {
       console.log('🔍 Verifying SMS code:', code);
@@ -457,11 +559,18 @@ export default function App() {
         
         if (signInResult.success) {
           console.log('✅ Sign-in verification successful for user:', signInResult.user?.id);
-          // Set user and trigger security setup check
+          
+          // CRITICAL: Set user data FIRST
           setUser(signInResult.user);
           setIsAuthenticated(true);
+          
           SecurityService.setCurrentUser(signInResult.user.id);
-          await checkSecuritySetup(signInResult.user.id);
+          
+          // Wait for state to settle before security check
+          setTimeout(async () => {
+            await checkSecuritySetup(signInResult.user.id);
+          }, 100);
+          
         } else {
           Alert.alert('Sign In Failed', signInResult.error || 'Verification failed');
         }
@@ -491,23 +600,29 @@ export default function App() {
     }
   };
 
-  // Complete authentication - SINGLE VERSION
+  // Complete authentication - ENHANCED VERSION
   const completeAuth = async (userData = null) => {
     try {
+      console.log('🎯 Completing authentication with user data:', userData);
+      
       if (userData && !authData.isNewUser) {
         // Existing user signing in
+        console.log('👤 Existing user sign-in completion');
         setUser(userData);
         setIsAuthenticated(true);
         
         // Set the user ID in SecurityService
         SecurityService.setCurrentUser(userData.id);
         
-        // Check security setup for existing users
-        await checkSecuritySetup(userData.id);
+        // Wait for state to settle before security check
+        setTimeout(async () => {
+          await checkSecuritySetup(userData.id);
+        }, 100);
         return;
       }
 
       // New user registration
+      console.log('📝 New user registration completion');
       
       // Validate required data
       if (!authData.firstName || !authData.lastName) {
@@ -525,6 +640,9 @@ export default function App() {
       const response = await ApiService.registerUser(authData);
       
       if (response && response.success) {
+        console.log('✅ User registration successful:', response.user);
+        
+        // CRITICAL: Set user data FIRST
         setUser(response.user);
         setIsAuthenticated(true);
         
@@ -557,6 +675,7 @@ export default function App() {
       }
       
     } catch (error) {
+      console.error('❌ completeAuth error:', error);
       Alert.alert('Registration Error', `Failed to create account: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -568,46 +687,73 @@ export default function App() {
   };
 
   const signOut = async () => {
-    await ApiService.signOut();
-    setUser(null);
-    setIsAuthenticated(false);
-    setCurrentAuthView('welcome');
-    setPinSetupRequired(false);
-    setPinAuthRequired(false);
-    setSecuritySetupComplete(false);
+    console.log('🚪 User signing out...');
     
-    // Clear the current user from SecurityService
-    SecurityService.setCurrentUser(null);
-    
-    // Reset ALL auth data
-    setAuthData({
-      authMethod: '',
-      isNewUser: false,
-      email: '',
-      password: '',
-      phone: '',
-      countryCode: '+996',
-      verificationCode: '',
-      googleId: '',
-      appleId: '',
-      socialToken: '',
-      firstName: '',
-      lastName: '',
-      profilePicture: null,
-      monthlyIncome: '',
-      currency: 'KGS',
-      selectedPlan: 'basic',
-      bio: '',
-      dateOfBirth: '',
-      occupation: ''
-    });
+    try {
+      // Clear API token
+      await ApiService.signOut();
+      
+      // Reset all authentication states
+      setUser(null);
+      setIsAuthenticated(false);
+      setCurrentAuthView('welcome');
+      
+      // Reset security states
+      setPinSetupRequired(false);
+      setPinAuthRequired(false);
+      setSecuritySetupComplete(false);
+      
+      // Reset initialization state to show welcome screen
+      setInitializationComplete(true);
+      setIsLoading(false);
+      
+      // Keep onboarding status (user has seen onboarding)
+      // but reset authentication
+      
+      // Clear the current user from SecurityService
+      SecurityService.setCurrentUser(null);
+      
+      // Reset ALL auth data
+      setAuthData({
+        authMethod: '',
+        isNewUser: false,
+        email: '',
+        password: '',
+        phone: '',
+        countryCode: '+996',
+        verificationCode: '',
+        googleId: '',
+        appleId: '',
+        socialToken: '',
+        firstName: '',
+        lastName: '',
+        profilePicture: null,
+        monthlyIncome: '',
+        currency: 'KGS',
+        selectedPlan: 'basic',
+        bio: '',
+        dateOfBirth: '',
+        occupation: ''
+      });
+      
+      console.log('✅ Sign out complete - should show welcome screen');
+      
+    } catch (error) {
+      console.error('❌ Error during sign out:', error);
+      // Still reset the states even if API call fails
+      setUser(null);
+      setIsAuthenticated(false);
+      setCurrentAuthView('welcome');
+      setInitializationComplete(true);
+      setIsLoading(false);
+    }
   };
 
   // Props for auth components
   const authProps = {
     authData,
     language,
-    setLanguage,
+    setLanguage: updateLanguage, // Use the enhanced function
     navigateAuth,
     completeAuth,
     handleAuthMethod,
@@ -618,8 +764,9 @@ export default function App() {
     handlePhoneSignIn,
   };
 
-  // FIXED: Loading screen with proper StatusBar
-  if (isLoading) {
+  // ENHANCED: Loading screen with proper StatusBar and user state logging
+  if (isLoading || !initializationComplete) {
+    console.log('📱 Showing loading screen - isLoading:', isLoading, 'initComplete:', initializationComplete);
     return (
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor="#05212A" />
@@ -643,13 +790,24 @@ export default function App() {
     );
   }
 
-  // Render screens with security flow
+  // Render screens with security flow - ENHANCED WITH DEBUG LOGGING
   const renderScreen = () => {
-    // FIXED: Proper StatusBar for all screens
     const statusBarProps = {
       barStyle: "light-content",
       backgroundColor: "#05212A"
     };
+
+    // Debug logging for security state
+    console.log('🎬 Rendering screen with state:', {
+      hasSeenOnboarding,
+      isAuthenticated,
+      user: !!user,
+      userId: user?.id,
+      pinSetupRequired,
+      pinAuthRequired,
+      securitySetupComplete,
+      initializationComplete
+    });
 
     if (!hasSeenOnboarding) {
       return (
@@ -657,7 +815,7 @@ export default function App() {
           <StatusBar {...statusBarProps} />
           <OnboardingFlow 
             language={language} 
-            setLanguage={setLanguage} 
+            setLanguage={updateLanguage} 
             onComplete={completeOnboarding}
           />
         </>
@@ -666,6 +824,7 @@ export default function App() {
 
     // If user is authenticated but needs PIN setup (NEW USERS)
     if (isAuthenticated && user && pinSetupRequired && !pinAuthRequired) {
+      console.log('🔧 Rendering PIN setup for new user:', user.id);
       return (
         <>
           <StatusBar {...statusBarProps} />
@@ -680,14 +839,27 @@ export default function App() {
 
     // If user is authenticated but needs PIN authentication (EXISTING USERS)
     if (isAuthenticated && user && pinAuthRequired && !pinSetupRequired) {
+      console.log('🔐 Rendering PIN entry for existing user:', user.id);
+      
+      // CRITICAL: Validate user object before passing to PinEntry
+      if (!user || !user.id) {
+        console.error('❌ User data is invalid for PinEntry:', user);
+        // Force re-authentication
+        signOut();
+        return null;
+      }
+      
       return (
         <>
           <StatusBar {...statusBarProps} />
           <PinEntry
             language={language}
-            user={user}
+            user={user}  // ENSURE user is valid here
             onSuccess={handlePinAuthSuccess}
-            onCancel={signOut}
+            onCancel={() => {
+              console.log('🚪 User clicked logout on PIN entry');
+              signOut();
+            }}
           />
         </>
       );
@@ -695,12 +867,14 @@ export default function App() {
 
     // If user is fully authenticated and security setup is complete
     if (isAuthenticated && user && securitySetupComplete && !pinSetupRequired && !pinAuthRequired) {
+      console.log('🎉 Rendering main app for authenticated user:', user.id);
       return (
         <>
           <StatusBar {...statusBarProps} />
           <MainApp 
             authData={user} 
             language={language} 
+            setLanguage={updateLanguage}
             onSignOut={signOut}
           />
         </>
@@ -708,6 +882,7 @@ export default function App() {
     }
 
     // Authentication flow (not authenticated yet)
+    console.log('🔓 Rendering auth flow, current view:', currentAuthView);
     const authScreens = {
       'welcome': <AuthWelcome {...authProps} />,
       'signin-form': <SignInForm {...authProps} />,

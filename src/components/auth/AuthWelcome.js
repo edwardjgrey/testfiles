@@ -1,4 +1,4 @@
-// src/components/auth/AuthWelcome.js - ORIGINAL DESIGN with language persistence fix
+// src/components/auth/AuthWelcome.js - UPDATED WITH VK BUTTON
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -29,7 +29,7 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
   // Smart authentication states
   const [appleSignInAvailable, setAppleSignInAvailable] = useState(false);
   const [regionalLoginAvailable, setRegionalLoginAvailable] = useState(false);
-  const [regionalLoginType, setRegionalLoginType] = useState(null);
+  const [regionalLoginProviders, setRegionalLoginProviders] = useState([]);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
@@ -54,47 +54,62 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
       setAppleSignInAvailable(appleAvailable);
 
       // Check regional login based on language
-      const regionalAuth = getRegionalAuthByLanguage(language);
-      setRegionalLoginAvailable(regionalAuth.available);
-      setRegionalLoginType(regionalAuth.type);
+      const regionalProviders = getRegionalAuthByLanguage(language);
+      setRegionalLoginAvailable(regionalProviders.length > 0);
+      setRegionalLoginProviders(regionalProviders);
       
-      console.log('Regional auth for', language, ':', regionalAuth);
+      console.log('Regional auth for', language, ':', regionalProviders);
       
     } catch (error) {
       console.error('Error checking auth availability:', error);
       setAppleSignInAvailable(false);
       setRegionalLoginAvailable(false);
+      setRegionalLoginProviders([]);
     } finally {
       setCheckingAuth(false);
     }
   };
 
-  // Determine regional login options based on language/region
+  // Determine regional login options based on language/region - UPDATED WITH VK
   const getRegionalAuthByLanguage = (lang) => {
     const regionalOptions = {
-      'ru': {
-        available: true,
-        type: 'yandex',
-        name: 'Yandex',
-        icon: 'logo-yahoo', // Using yahoo icon as substitute for Yandex
-        backgroundColor: '#FFCC00',
-        borderColor: '#E6B800'
-      },
-      'ky': {
-        available: true,
-        type: 'yandex', // Yandex is also popular in Kyrgyzstan
-        name: 'Yandex',
-        icon: 'logo-yahoo', // Using yahoo icon as substitute for Yandex
-        backgroundColor: '#FFCC00',
-        borderColor: '#E6B800'
-      },
-      'en': {
-        available: false, // No additional regional auth for English
-        type: null
-      }
+      'ru': [
+        {
+          type: 'yandex',
+          name: 'Yandex',
+          icon: 'logo-yahoo', // Using yahoo icon as substitute
+          backgroundColor: '#FFCC00',
+          borderColor: '#E6B800'
+        },
+        {
+          type: 'vk',
+          name: 'VKontakte',
+          icon: 'logo-vk', // VK icon (if not available, will fallback to globe-outline)
+          backgroundColor: '#4680C2',
+          borderColor: '#3A6FA5'
+        }
+      ],
+      'ky': [
+        {
+          type: 'yandex',
+          name: 'Yandex',
+          icon: 'logo-yahoo',
+          backgroundColor: '#FFCC00',
+          borderColor: '#E6B800',
+          
+        },
+        {
+          type: 'vk',
+          name: 'VKontakte',
+          icon: 'logo-vk',
+          backgroundColor: '#4680C2',
+          borderColor: '#3A6FA5'
+        }
+      ],
+      'en': [] // No regional auth for English
     };
 
-    return regionalOptions[lang] || { available: false, type: null };
+    return regionalOptions[lang] || [];
   };
 
   // Handle email registration
@@ -167,18 +182,8 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
     }
   };
 
-  // Regional login handler
-  const handleRegionalLogin = async () => {
-    const authText = getRegionalAuthText();
-    Alert.alert(
-      authText.title,
-      authText.message,
-      [{ text: 'OK' }]
-    );
-  };
-
-  // Get regional auth text based on current type
-  const getRegionalAuthText = () => {
+  // Regional login handler - UPDATED TO HANDLE SPECIFIC PROVIDERS
+  const handleRegionalLogin = async (provider) => {
     const authTexts = {
       'yandex': {
         title: language === 'ru' ? 'Вход через Yandex' : 
@@ -186,10 +191,22 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
         message: language === 'ru' ? 'Авторизация через Yandex пока не реализована. Пожалуйста, используйте email или телефон.' :
                  language === 'ky' ? 'Yandex аркылуу кирүү азырынча иштебейт. Email же телефон колдонуңуз.' : 
                  'Yandex authentication is not implemented yet. Please use email or phone registration.'
+      },
+      'vk': {
+        title: language === 'ru' ? 'Вход через VKontakte' : 
+               language === 'ky' ? 'VKontakte аркылуу кирүү' : 'VKontakte Sign-In',
+        message: language === 'ru' ? 'Авторизация через VKontakte пока не реализована. Пожалуйста, используйте email или телефон.' :
+                 language === 'ky' ? 'VKontakte аркылуу кирүү азырынча иштебейт. Email же телефон колдонуңуз.' : 
+                 'VKontakte authentication is not implemented yet. Please use email or phone registration.'
       }
     };
     
-    return authTexts[regionalLoginType] || authTexts['yandex'];
+    const authText = authTexts[provider] || authTexts['yandex'];
+    Alert.alert(
+      authText.title,
+      authText.message,
+      [{ text: 'OK' }]
+    );
   };
 
   // Handle sign in (existing users)
@@ -346,29 +363,31 @@ const AuthWelcome = ({ language, setLanguage, handleAuthMethod, navigateAuth }) 
                 </TouchableOpacity>
               )}
 
-              {/* Regional Login - Only show if available based on language/region */}
-              {regionalLoginAvailable && regionalLoginType && (
+              {/* Regional Login Buttons - UPDATED TO SHOW MULTIPLE */}
+              {regionalLoginAvailable && regionalLoginProviders.map((provider, index) => (
                 <TouchableOpacity
+                  key={provider.type}
                   style={[styles.button, {
-                    backgroundColor: getRegionalAuthByLanguage(language).backgroundColor,
-                    borderColor: getRegionalAuthByLanguage(language).borderColor,
-                    borderWidth: 1
+                    backgroundColor: provider.backgroundColor,
+                    borderColor: provider.borderColor,
+                    borderWidth: 1,
+                    marginTop: index === 0 ? 6 : 0, // Add spacing for first regional button
                   }]}
-                  onPress={handleRegionalLogin}
+                  onPress={() => handleRegionalLogin(provider.type)}
                   disabled={loading}
                 >
                   <Ionicons 
-                    name={getRegionalAuthByLanguage(language).icon || "globe-outline"} 
+                    name={provider.icon || "globe-outline"} 
                     size={18} 
                     color="#ffffff" 
                   />
                   <Text style={[styles.googleButtonText, { marginLeft: 12 }]}>
-                    {language === 'ru' ? `Войти через ${getRegionalAuthByLanguage(language).name}` :
-                     language === 'ky' ? `${getRegionalAuthByLanguage(language).name} аркылуу кирүү` :
-                     `Continue with ${getRegionalAuthByLanguage(language).name}`}
+                    {language === 'ru' ? `Войти через ${provider.name}` :
+                     language === 'ky' ? `${provider.name} аркылуу кирүү` :
+                     `Continue with ${provider.name}`}
                   </Text>
                 </TouchableOpacity>
-              )}
+              ))}
             </View>
             
             {/* Sign In Link */}

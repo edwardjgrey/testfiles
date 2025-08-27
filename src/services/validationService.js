@@ -1,9 +1,9 @@
-// src/services/validationService.js - Essential validation for production
+// src/services/validationService.js - FIXED UK PHONE VALIDATION
 import { Alert } from 'react-native';
 
 class ValidationService {
   
-  // Phone number validation - COMPREHENSIVE VERSION WITH TRANSLATIONS
+  // Phone number validation - COMPREHENSIVE VERSION WITH FIXED UK SUPPORT
   static validatePhone(phone, countryCode = '+996', language = 'en') {
     if (!phone) {
       return { 
@@ -15,10 +15,22 @@ class ValidationService {
     }
 
     // Sanitize phone (remove spaces, dashes, parentheses)
-    const sanitizedPhone = phone.replace(/[\s\-\(\)\.]/g, '');
+    let sanitizedPhone = phone.replace(/[\s\-\(\)\.]/g, '');
     
-    // Remove country code if included
-    const cleanPhone = sanitizedPhone.replace(/^\+\d{1,4}/, '');
+    // SPECIAL HANDLING FOR UK NUMBERS - Remove country code if included
+    if (countryCode === '+44') {
+      // Remove +44 if present at start
+      sanitizedPhone = sanitizedPhone.replace(/^(\+44|44)/, '');
+      // Remove leading 0 if present (UK mobile numbers start with 07)
+      if (sanitizedPhone.startsWith('0')) {
+        sanitizedPhone = sanitizedPhone.substring(1);
+      }
+    } else {
+      // For other countries, remove country code if included
+      sanitizedPhone = sanitizedPhone.replace(/^\+\d{1,4}/, '');
+    }
+    
+    const cleanPhone = sanitizedPhone;
     
     // Only allow digits
     if (!/^\d+$/.test(cleanPhone)) {
@@ -49,7 +61,7 @@ class ValidationService {
     return { valid: true, sanitized: cleanPhone, formatted: validation.formatted };
   }
 
-  // Country-specific phone validation with strict rules and translations
+  // FIXED: Country-specific phone validation with UK support
   static validatePhoneByCountry(phone, countryCode, language = 'en') {
     const validations = {
       '+996': { 
@@ -74,11 +86,14 @@ class ValidationService {
         name: language === 'ru' ? 'США/Канада' : language === 'ky' ? 'АКШ/Канада' : 'USA/Canada'
       }, 
       '+44': { 
-        length: 10, // UK mobile without leading 0
+        // FIXED: UK accepts both 10 and 11 digits (without leading 0)
+        length: [10, 11], // Allow both lengths
         format: 'XXXX XXX XXX', 
         example: '7700 123 456',
-        pattern: /^7[3-9]\d{8}$/, // UK mobile format
-        name: language === 'ru' ? 'Великобритания' : language === 'ky' ? 'Улуу Британия' : 'United Kingdom'
+        // FIXED: UK mobile pattern - accepts both 10 and 11 digit formats
+        pattern: /^7[0-9]\d{8,9}$/, // UK mobile: 7X followed by 8-9 more digits
+        name: language === 'ru' ? 'Великобритания' : language === 'ky' ? 'Улуу Британия' : 'United Kingdom',
+        multipleFormats: true
       }, 
       '+992': { 
         length: 9, 
@@ -103,24 +118,46 @@ class ValidationService {
       return { valid: true, formatted: phone };
     }
 
-    // Check length
-    if (phone.length !== config.length) {
-      const lengthError = language === 'ru' ? 
-        `Номер телефона должен содержать ${config.length} цифр для ${config.name}. Пример: ${config.example}` :
-        language === 'ky' ?
-        `Телефон номери ${config.name} үчүн ${config.length} сандан турушу керек. Мисал: ${config.example}` :
-        `Phone number must be ${config.length} digits for ${config.name}. Example: ${config.example}`;
+    // FIXED: Check length - handle both single length and multiple lengths (UK case)
+    const expectedLengths = Array.isArray(config.length) ? config.length : [config.length];
+    if (!expectedLengths.includes(phone.length)) {
+      let lengthError;
+      
+      if (countryCode === '+44') {
+        // Special message for UK
+        lengthError = language === 'ru' ? 
+          `UK номер должен содержать 10 или 11 цифр (без 0 в начале). Примеры: "7700123456" или "07700123456"` :
+          language === 'ky' ?
+          `UK номери 10 же 11 сандан турушу керек (башында 0 жок). Мисалдар: "7700123456" же "07700123456"` :
+          `UK number must be 10 or 11 digits (without leading 0). Examples: "7700123456" or "07700123456"`;
+      } else {
+        lengthError = language === 'ru' ? 
+          `Номер телефона должен содержать ${config.length} цифр для ${config.name}. Пример: ${config.example}` :
+          language === 'ky' ?
+          `Телефон номери ${config.name} үчүн ${config.length} сандан турушу керек. Мисал: ${config.example}` :
+          `Phone number must be ${config.length} digits for ${config.name}. Example: ${config.example}`;
+      }
         
       return { valid: false, error: lengthError };
     }
 
     // Check pattern if defined
     if (config.pattern && !config.pattern.test(phone)) {
-      const formatError = language === 'ru' ?
-        `Неверный формат номера телефона для ${config.name}. Пример: ${config.example}` :
-        language === 'ky' ?
-        `${config.name} үчүн телефон номеринин форматы туура эмес. Мисал: ${config.example}` :
-        `Invalid phone number format for ${config.name}. Example: ${config.example}`;
+      let formatError;
+      
+      if (countryCode === '+44') {
+        formatError = language === 'ru' ?
+          `UK номер должен начинаться с 7. Примеры: "7700123456", "7525224482"` :
+          language === 'ky' ?
+          `UK номери 7 менен башталышы керек. Мисалдар: "7700123456", "7525224482"` :
+          `UK number must start with 7. Examples: "7700123456", "7525224482"`;
+      } else {
+        formatError = language === 'ru' ?
+          `Неверный формат номера телефона для ${config.name}. Пример: ${config.example}` :
+          language === 'ky' ?
+          `${config.name} үчүн телефон номеринин форматы туура эмес. Мисал: ${config.example}` :
+          `Invalid phone number format for ${config.name}. Example: ${config.example}`;
+      }
         
       return { valid: false, error: formatError };
     }
@@ -129,6 +166,29 @@ class ValidationService {
     const formatted = this.formatPhoneNumber(phone, countryCode);
     
     return { valid: true, formatted };
+  }
+
+  // FIXED: Format phone number with improved UK support
+  static formatPhoneNumber(phone, countryCode) {
+    switch (countryCode) {
+      case '+996':
+      case '+992':
+        return phone.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
+      case '+7':
+        return phone.replace(/(\d{3})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4');
+      case '+1':
+        return phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+      case '+44':
+        // FIXED: UK formatting - handle both 10 and 11 digit numbers
+        if (phone.length === 10) {
+          return phone.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
+        } else if (phone.length === 11) {
+          return phone.replace(/(\d{5})(\d{3})(\d{3})/, '$1 $2 $3');
+        }
+        return phone;
+      default:
+        return phone;
+    }
   }
 
   // Check for suspicious phone patterns
@@ -147,23 +207,6 @@ class ValidationService {
     ];
     
     return fakeNumbers.includes(phone);
-  }
-
-  // Format phone number based on country
-  static formatPhoneNumber(phone, countryCode) {
-    switch (countryCode) {
-      case '+996':
-      case '+992':
-        return phone.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
-      case '+7':
-        return phone.replace(/(\d{3})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4');
-      case '+1':
-        return phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
-      case '+44':
-        return phone.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
-      default:
-        return phone;
-    }
   }
 
   // Email validation
