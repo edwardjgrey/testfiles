@@ -113,6 +113,142 @@ export const globalStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+
+  // Add these styles to your globalStyles.js file
+
+// Enhanced form styles
+errorText: {
+  color: '#ef4444',
+  fontSize: 12,
+  marginTop: 4,
+  fontWeight: '500',
+},
+
+validIcon: {
+  position: 'absolute',
+  right: 12,
+  top: 38,
+  zIndex: 1,
+},
+
+// Dropdown styles
+dropdownContainer: {
+  position: 'absolute',
+  top: '100%',
+  left: 0,
+  right: 0,
+  backgroundColor: 'white',
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#e5e7eb',
+  shadowColor: '#000',
+  shadowOffset: {
+    width: 0,
+    height: 4,
+  },
+  shadowOpacity: 0.1,
+  shadowRadius: 8,
+  elevation: 8,
+  zIndex: 1000,
+  maxHeight: 200,
+},
+
+dropdownScroll: {
+  maxHeight: 200,
+},
+
+dropdownItem: {
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+  borderBottomWidth: 1,
+  borderBottomColor: '#f3f4f6',
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
+
+dropdownItemSelected: {
+  backgroundColor: '#f0f9ff',
+},
+
+dropdownItemText: {
+  fontSize: 16,
+  color: '#374151',
+  flex: 1,
+},
+
+dropdownItemTextSelected: {
+  color: '#3b82f6',
+  fontWeight: '600',
+},
+
+// Enhanced profile picture styles
+profilePicPlaceholder: {
+  width: 80,
+  height: 80,
+  borderRadius: 40,
+  backgroundColor: '#6b7280',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+profilePicPreview: {
+  width: 80,
+  height: 80,
+  borderRadius: 40,
+},
+
+profilePicContainer: {
+  position: 'relative',
+  alignItems: 'center',
+},
+
+profilePicUpload: {
+  position: 'absolute',
+  bottom: 0,
+  right: 0,
+  backgroundColor: '#3b82f6',
+  width: 28,
+  height: 28,
+  borderRadius: 14,
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderWidth: 2,
+  borderColor: 'white',
+},
+
+profilePicSection: {
+  alignItems: 'center',
+  marginBottom: 24,
+},
+
+// Enhanced form group with relative positioning for dropdowns
+formGroup: {
+  marginBottom: 20,
+  position: 'relative',
+  zIndex: 1,
+},
+
+// Update existing formInput to handle validation states
+formInput: {
+  backgroundColor: 'white',
+  borderWidth: 1.5,
+  borderColor: '#e5e7eb',
+  borderRadius: 12,
+  paddingHorizontal: 16,
+  paddingVertical: 14,
+  fontSize: 16,
+  color: '#111827',
+  fontWeight: '500',
+  shadowColor: '#000',
+  shadowOffset: {
+    width: 0,
+    height: 1,
+  },
+  shadowOpacity: 0.05,
+  shadowRadius: 2,
+  elevation: 1,
+},
   
   // Scroll Content
   scrollContent: {

@@ -10,6 +10,8 @@ import {
   Alert,
   Image,
   Dimensions,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -18,17 +20,32 @@ import { translations } from '../../utils/translations';
 import LanguageSelector from '../common/LanguageSelector';
 import KeyboardAwareWrapper from '../common/KeyboardAwareWrapper';
 
-
-
 const { width } = Dimensions.get('window');
+
+// Title options that can be translated
+const titleOptions = [
+  'mr',
+  'mrs',
+  'miss',
+  'ms',
+  'dr',
+  'prof',
+];
 
 const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
   const t = translations[language];
+  const [title, setTitle] = useState(authData.title || '');
   const [firstName, setFirstName] = useState(authData.firstName || '');
   const [lastName, setLastName] = useState(authData.lastName || '');
   const [email, setEmail] = useState(authData.email || '');
   const [profilePic, setProfilePic] = useState(authData.profilePicture || null);
   const [loading, setLoading] = useState(false);
+  const [showTitleDropdown, setShowTitleDropdown] = useState(false);
+
+  // Validate name input - only letters (no spaces, numbers, or special characters)
+  const validateNameInput = (text) => {
+    return text.replace(/[^a-zA-Z]/g, '');
+  };
 
   const pickImage = async () => {
     Alert.alert(
@@ -82,9 +99,25 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
     }
   };
 
+  const handleTitleSelect = (selectedTitle) => {
+    setTitle(selectedTitle);
+    setShowTitleDropdown(false);
+  };
+
   const handleContinue = async () => {
+    if (!title) {
+      Alert.alert('Error', 'Please select a title');
+      return;
+    }
+    
     if (!firstName || !lastName) {
       Alert.alert('Error', 'Please enter your name');
+      return;
+    }
+    
+    // Additional validation for name fields
+    if (firstName.trim().length < 2 || lastName.trim().length < 2) {
+      Alert.alert('Error', 'Names must be at least 2 characters long');
       return;
     }
     
@@ -93,12 +126,24 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
     setLoading(false);
     
     navigateAuth('subscription', { 
+      title,
       firstName, 
       lastName, 
       email, 
       profilePicture: profilePic 
     });
   };
+
+  const renderTitleItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.dropdownItem}
+      onPress={() => handleTitleSelect(item)}
+    >
+      <Text style={styles.dropdownItemText}>
+        {t.titles?.[item] || item.toUpperCase()}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={globalStyles.authContainer}>
@@ -153,15 +198,31 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
             </Text>
           </View>
 
+          {/* Title Dropdown */}
+          <View style={globalStyles.formGroup}>
+            <Text style={globalStyles.formLabel}>{t.title || 'Title'} *</Text>
+            <TouchableOpacity
+              style={[globalStyles.formInput, styles.dropdownTrigger]}
+              onPress={() => setShowTitleDropdown(true)}
+            >
+              <Text style={[
+                styles.dropdownTriggerText,
+                !title && styles.placeholderText
+              ]}>
+                {title ? (t.titles?.[title] || title.toUpperCase()) : (t.selectTitle || 'Select Title')}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+
           <View style={globalStyles.formGroup}>
             <Text style={globalStyles.formLabel}>{t.firstName} *</Text>
             <TextInput
               style={globalStyles.formInput}
               value={firstName}
-              onChangeText={setFirstName}
+              onChangeText={(text) => setFirstName(validateNameInput(text))}
               placeholder="John"
               placeholderTextColor="#69696988"
-              
               returnKeyType="next"
             />
           </View>
@@ -171,7 +232,7 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
             <TextInput
               style={globalStyles.formInput}
               value={lastName}
-              onChangeText={setLastName}
+              onChangeText={(text) => setLastName(validateNameInput(text))}
               placeholder="Doe"
               placeholderTextColor="#69696988"
               returnKeyType="next"
@@ -208,8 +269,106 @@ const ProfileSetup = ({ authData, language, setLanguage, navigateAuth }) => {
           </TouchableOpacity>
         </View>
       </KeyboardAwareWrapper>
+
+      {/* Title Selection Modal */}
+      <Modal
+        visible={showTitleDropdown}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowTitleDropdown(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowTitleDropdown(false)}
+        >
+          <View style={styles.dropdownModal}>
+            <View style={styles.dropdownHeader}>
+              <Text style={styles.dropdownHeaderText}>{t.selectTitle || 'Select Title'}</Text>
+              <TouchableOpacity
+                onPress={() => setShowTitleDropdown(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={titleOptions}
+              keyExtractor={(item) => item}
+              renderItem={renderTitleItem}
+              style={styles.dropdownList}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
+};
+
+// Additional styles for the dropdown
+const styles = {
+  dropdownTrigger: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingRight: 12,
+  },
+  dropdownTriggerText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  placeholderText: {
+    color: '#ffffff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownModal: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    width: width * 0.8,
+    maxHeight: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  dropdownHeaderText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  dropdownList: {
+    maxHeight: 300,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    backgroundColor: 'white',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#1f2937',
+  },
 };
 
 export default ProfileSetup;

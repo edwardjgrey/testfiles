@@ -882,7 +882,10 @@ export default function App() {
     }
 
     // Authentication flow (not authenticated yet)
-    console.log('🔓 Rendering auth flow, current view:', currentAuthView);
+// Replace this section in your App.js around line 580-590:
+
+    // Authentication flow (not authenticated yet)
+    console.log('🔑 Rendering auth flow, current view:', currentAuthView);
     const authScreens = {
       'welcome': <AuthWelcome {...authProps} />,
       'signin-form': <SignInForm {...authProps} />,
@@ -891,8 +894,8 @@ export default function App() {
       'verify': <CodeVerification {...authProps} />,
       'profile': <ProfileSetup {...authProps} />,
       'subscription': <SubscriptionPlans {...authProps} />,
-      'financial': <FinancialOnboarding {...authProps} />
-    };
+      'financial': <FinancialOnboarding {...authProps} /> 
+    }
 
     return (
       <>

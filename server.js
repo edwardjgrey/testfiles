@@ -1,4 +1,4 @@
-// server.js - COMPLETE PRODUCTION-READY VERSION WITH PASSWORD RESET
+// server.js - COMPLETE PRODUCTION-READY VERSION WITH FINANCIAL ONBOARDING
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -7,8 +7,13 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const validator = require('validator');
 const crypto = require('crypto');
+const multer = require('multer');
+const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
+
+// Import financial processor
+const FinancialProcessor = require('./services/financialProcessor');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -119,6 +124,30 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
   maxUses: 7500, // Close connection after this many queries
   allowExitOnIdle: true
+});
+
+// Initialize financial processor
+const financialProcessor = new FinancialProcessor(pool);
+
+// Configure multer for memory storage (Render-compatible)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB limit per file
+    files: parseInt(process.env.UPLOAD_FILES_LIMIT) || 5 // Max 5 files per request
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow specific file types
+    const allowedTypes = /pdf|csv|xlsx|xls|jpg|jpeg|png/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type. Allowed: PDF, CSV, Excel, Images`));
+    }
+  }
 });
 
 // Database connection with enhanced error handling
@@ -277,14 +306,6 @@ async function setupDatabase() {
     
     await client.query('BEGIN');
     
-    // Drop existing tables to recreate with correct schema (DEVELOPMENT ONLY)
-    // if (process.env.NODE_ENV === 'development') {
-    //   await client.query('DROP TABLE IF EXISTS audit_logs CASCADE');
-    //   await client.query('DROP TABLE IF EXISTS user_subscriptions CASCADE');
-    //   await client.query('DROP TABLE IF EXISTS subscription_plans CASCADE');
-    //   await client.query('DROP TABLE IF EXISTS users CASCADE');
-    //   console.log('Dropped existing tables for fresh setup');
-    // }
     // Create users table with enhanced security fields
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -427,6 +448,52 @@ async function setupDatabase() {
       )
     `);
 
+    // Create financial tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        amount DECIMAL(12,2) NOT NULL,
+        description TEXT NOT NULL,
+        category VARCHAR(50),
+        transaction_date DATE NOT NULL,
+        transaction_type VARCHAR(20) DEFAULT 'expense',
+        confidence_score DECIMAL(3,2),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, amount, description, transaction_date)
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS budgets (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        category VARCHAR(50) NOT NULL,
+        monthly_limit DECIMAL(12,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS financial_goals (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        target_amount DECIMAL(12,2) NOT NULL,
+        timeline_months INTEGER,
+        priority VARCHAR(20) DEFAULT 'medium',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create indexes for financial tables
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, transaction_date);
+      CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
+      CREATE INDEX IF NOT EXISTS idx_budgets_user ON budgets(user_id);
+      CREATE INDEX IF NOT EXISTS idx_goals_user ON financial_goals(user_id);
+    `);
+
     await client.query('COMMIT');
     console.log('Database tables setup complete');
     
@@ -472,6 +539,15 @@ async function displayUserStats() {
       FROM users
     `);
 
+    // Get financial onboarding stats
+    const financialStats = await pool.query(`
+      SELECT 
+        COUNT(DISTINCT user_id) as users_with_transactions,
+        COUNT(*) as total_transactions,
+        COUNT(DISTINCT user_id) FILTER (WHERE transaction_date >= CURRENT_DATE - INTERVAL '30 days') as active_users
+      FROM transactions
+    `);
+
     // Get recent registrations (last 24 hours)
     const recentResult = await pool.query(`
       SELECT COUNT(*) as recent_registrations
@@ -500,6 +576,13 @@ async function displayUserStats() {
       console.log(`  Verified: ${verificationData.verified}/${totalUsers} (${((verificationData.verified / totalUsers) * 100).toFixed(1)}%)`);
       console.log(`  Email Verified: ${verificationData.email_verified}/${totalUsers} (${((verificationData.email_verified / totalUsers) * 100).toFixed(1)}%)`);
       console.log(`  Phone Verified: ${verificationData.phone_verified}/${totalUsers} (${((verificationData.phone_verified / totalUsers) * 100).toFixed(1)}%)`);
+
+      // Financial statistics
+      const finStats = financialStats.rows[0];
+      console.log('\nFinancial Onboarding:');
+      console.log(`  Users with transactions: ${finStats.users_with_transactions}/${totalUsers} (${((finStats.users_with_transactions / totalUsers) * 100).toFixed(1)}%)`);
+      console.log(`  Total transactions processed: ${finStats.total_transactions}`);
+      console.log(`  Active users (30 days): ${finStats.active_users}`);
 
       const recentRegistrations = parseInt(recentResult.rows[0].recent_registrations);
       console.log(`\nRecent Activity:`);
@@ -1446,6 +1529,396 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== FINANCIAL ONBOARDING ENDPOINTS ====================
+
+// Upload and process financial statements
+app.post('/api/financial/upload', authenticateToken, upload.array('files', 5), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const files = req.files;
+    
+    if (!files || files.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'No files uploaded. Please select PDF, CSV, Excel, or image files.',
+        code: 'NO_FILES'
+      });
+    }
+
+    console.log(`Processing ${files.length} files for user ${userId}`);
+
+    // Validate file sizes and types
+    const invalidFiles = files.filter(file => 
+      file.size > 10 * 1024 * 1024 || // > 10MB
+      !['application/pdf', 'text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'image/jpeg', 'image/png'].includes(file.mimetype)
+    );
+
+    if (invalidFiles.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid files detected. Check file sizes (max 10MB) and types (PDF, CSV, Excel, JPG, PNG only).`,
+        code: 'INVALID_FILES',
+        invalidFiles: invalidFiles.map(f => ({ name: f.originalname, size: f.size, type: f.mimetype }))
+      });
+    }
+
+    // Process files using financial processor
+    const results = await financialProcessor.processFiles(userId, files);
+
+    // Log successful processing
+    await logAuditEvent(userId, 'FINANCIAL_UPLOAD_SUCCESS', 'financial', req, true, null, {
+      filesProcessed: files.length,
+      transactionsExtracted: results.transactions.length,
+      categoriesFound: results.summary.categories.length
+    });
+
+    console.log(`Financial processing completed for user ${userId}: ${results.transactions.length} transactions`);
+
+    res.json({
+      success: true,
+      message: 'Financial data processed successfully',
+      data: {
+        transactions: results.transactions.length,
+        categories: results.summary.categories,
+        dateRange: results.summary.dateRange,
+        budget: results.budget,
+        goalRecommendations: results.goals
+      }
+    });
+
+  } catch (error) {
+    console.error('Financial upload error:', error);
+    
+    await logAuditEvent(req.user?.id, 'FINANCIAL_UPLOAD_FAILED', 'financial', req, false, error.message);
+
+    // Handle specific errors
+    if (error.message.includes('Processing failed')) {
+      return res.status(422).json({
+        success: false,
+        error: 'Failed to process one or more files. Please check file formats and try again.',
+        code: 'PROCESSING_FAILED',
+        details: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Financial processing failed. Please try again.',
+      code: 'PROCESSING_ERROR'
+    });
+  }
+});
+
+// Get user's financial transactions
+app.get('/api/financial/transactions', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { category, startDate, endDate, limit = 50, offset = 0 } = req.query;
+
+    let query = `
+      SELECT id, amount, description, category, transaction_date, transaction_type, confidence_score, created_at
+      FROM transactions 
+      WHERE user_id = $1
+    `;
+    const params = [userId];
+    let paramIndex = 2;
+
+    // Add filters
+    if (category && category !== 'all') {
+      query += ` AND category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    if (startDate) {
+      query += ` AND transaction_date >= $${paramIndex}`;
+      params.push(startDate);
+      paramIndex++;
+    }
+
+    if (endDate) {
+      query += ` AND transaction_date <= $${paramIndex}`;
+      params.push(endDate);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY transaction_date DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(limit, offset);
+
+    const result = await pool.query(query, params);
+    
+    // Get total count
+    const countResult = await pool.query(
+      'SELECT COUNT(*) FROM transactions WHERE user_id = $1',
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      transactions: result.rows,
+      pagination: {
+        total: parseInt(countResult.rows[0].count),
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: (parseInt(offset) + result.rows.length) < parseInt(countResult.rows[0].count)
+      }
+    });
+
+  } catch (error) {
+    console.error('Get transactions error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve transactions',
+      code: 'FETCH_TRANSACTIONS_ERROR'
+    });
+  }
+});
+
+// Get user's budget
+app.get('/api/financial/budget', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const result = await pool.query(
+      'SELECT * FROM budgets WHERE user_id = $1 ORDER BY category',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No budget found. Please upload financial statements first.',
+        code: 'NO_BUDGET_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      budget: result.rows
+    });
+
+  } catch (error) {
+    console.error('Get budget error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve budget',
+      code: 'FETCH_BUDGET_ERROR'
+    });
+  }
+});
+
+// Get user's financial goals
+app.get('/api/financial/goals', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const result = await pool.query(
+      'SELECT * FROM financial_goals WHERE user_id = $1 ORDER BY priority DESC, created_at DESC',
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      goals: result.rows
+    });
+
+  } catch (error) {
+    console.error('Get goals error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve financial goals',
+      code: 'FETCH_GOALS_ERROR'
+    });
+  }
+});
+
+// Create or update financial goals
+app.post('/api/financial/goals', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { goals } = req.body;
+
+    if (!goals || !Array.isArray(goals) || goals.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Goals array is required',
+        code: 'INVALID_GOALS_DATA'
+      });
+    }
+
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Clear existing goals
+      await client.query('DELETE FROM financial_goals WHERE user_id = $1', [userId]);
+      
+      // Insert new goals
+      const insertQuery = `
+        INSERT INTO financial_goals (user_id, title, target_amount, timeline_months, priority)
+        VALUES ($1, $2, $3, $4, $5)
+      `;
+      
+      for (const goal of goals) {
+        await client.query(insertQuery, [
+          userId,
+          goal.title,
+          goal.target_amount || goal.targetAmount,
+          goal.timeline_months || goal.timelineMonths,
+          goal.priority || 'medium'
+        ]);
+      }
+      
+      await client.query('COMMIT');
+      
+      await logAuditEvent(userId, 'FINANCIAL_GOALS_SAVED', 'financial', req, true, null, { goalsCount: goals.length });
+      
+      res.json({
+        success: true,
+        message: `${goals.length} financial goals saved successfully`
+      });
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+  } catch (error) {
+    console.error('Save goals error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save financial goals',
+      code: 'SAVE_GOALS_ERROR'
+    });
+  }
+});
+
+// Get financial summary/dashboard data
+app.get('/api/financial/summary', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get transaction summary
+    const transactionSummary = await pool.query(`
+      SELECT 
+        COUNT(*) as total_transactions,
+        COUNT(CASE WHEN transaction_type = 'income' THEN 1 END) as income_transactions,
+        COUNT(CASE WHEN transaction_type = 'expense' THEN 1 END) as expense_transactions,
+        COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) as total_income,
+        COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN ABS(amount) ELSE 0 END), 0) as total_expenses,
+        COUNT(DISTINCT category) as categories_count,
+        MIN(transaction_date) as earliest_date,
+        MAX(transaction_date) as latest_date
+      FROM transactions 
+      WHERE user_id = $1
+    `, [userId]);
+    
+    // Get category breakdown
+    const categoryBreakdown = await pool.query(`
+      SELECT 
+        category, 
+        COUNT(*) as transaction_count,
+        SUM(ABS(amount)) as total_amount,
+        AVG(confidence_score) as avg_confidence
+      FROM transactions 
+      WHERE user_id = $1 AND transaction_type = 'expense'
+      GROUP BY category 
+      ORDER BY total_amount DESC
+      LIMIT 10
+    `, [userId]);
+    
+    // Get budget count
+    const budgetCount = await pool.query(
+      'SELECT COUNT(*) as budget_categories FROM budgets WHERE user_id = $1',
+      [userId]
+    );
+    
+    // Get goals count
+    const goalsCount = await pool.query(
+      'SELECT COUNT(*) as total_goals FROM financial_goals WHERE user_id = $1',
+      [userId]
+    );
+
+    const summary = transactionSummary.rows[0];
+    
+    res.json({
+      success: true,
+      summary: {
+        transactions: {
+          total: parseInt(summary.total_transactions),
+          income: parseInt(summary.income_transactions),
+          expenses: parseInt(summary.expense_transactions),
+          categories: parseInt(summary.categories_count)
+        },
+        amounts: {
+          totalIncome: parseFloat(summary.total_income) || 0,
+          totalExpenses: parseFloat(summary.total_expenses) || 0,
+          netAmount: (parseFloat(summary.total_income) || 0) - (parseFloat(summary.total_expenses) || 0)
+        },
+        dateRange: {
+          earliest: summary.earliest_date,
+          latest: summary.latest_date
+        },
+        budgetCategories: parseInt(budgetCount.rows[0].budget_categories),
+        totalGoals: parseInt(goalsCount.rows[0].total_goals),
+        topCategories: categoryBreakdown.rows
+      }
+    });
+
+  } catch (error) {
+    console.error('Get financial summary error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve financial summary',
+      code: 'FETCH_SUMMARY_ERROR'
+    });
+  }
+});
+
+// Delete user's financial data
+app.delete('/api/financial/data', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Delete in correct order due to foreign keys
+      await client.query('DELETE FROM financial_goals WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM budgets WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM transactions WHERE user_id = $1', [userId]);
+      
+      await client.query('COMMIT');
+      
+      await logAuditEvent(userId, 'FINANCIAL_DATA_DELETED', 'financial', req, true);
+      
+      res.json({
+        success: true,
+        message: 'All financial data deleted successfully'
+      });
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+  } catch (error) {
+    console.error('Delete financial data error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete financial data',
+      code: 'DELETE_DATA_ERROR'
+    });
+  }
+});
+
 // Health check with database connectivity test
 app.get('/api/health', async (req, res) => {
   try {
@@ -1502,6 +1975,23 @@ const handleError = (error, req, res, next) => {
     });
   }
 
+  // Multer file upload errors
+  if (error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      error: 'File too large. Maximum size is 10MB.',
+      code: 'FILE_TOO_LARGE'
+    });
+  }
+
+  if (error.code === 'LIMIT_FILE_COUNT') {
+    return res.status(400).json({
+      success: false,
+      error: 'Too many files. Maximum is 5 files.',
+      code: 'TOO_MANY_FILES'
+    });
+  }
+
   // Generic error response
   res.status(error.status || 500).json({
     success: false,
@@ -1547,6 +2037,7 @@ const startServer = async () => {
       console.log(`Network: http://0.0.0.0:${PORT}/api`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`CORS origins: ${allowedOrigins.join(', ')}`);
+      console.log(`Financial onboarding system ready`);
     });
     
     // Graceful shutdown handlers
