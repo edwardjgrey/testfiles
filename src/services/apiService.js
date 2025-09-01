@@ -1,9 +1,29 @@
-// src/services/apiService.js - FIXED VERSION with correct endpoints
+// src/services/apiService.js - ENHANCED with offline mode toggle
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = 'http://192.168.0.245:3000/api';
 
 class ApiService {
+  constructor() {
+    this.offlineMode = false;
+    this.connectionStatus = 'unknown';
+  }
+
+  // NEW: Set offline mode (preserves all existing functionality)
+  setOfflineMode(enabled) {
+    this.offlineMode = enabled;
+    console.log(`📱 Offline mode ${enabled ? 'ENABLED' : 'DISABLED'}`);
+  }
+
+  // NEW: Get current connection status
+  getConnectionStatus() {
+    return {
+      isOnline: !this.offlineMode && this.connectionStatus === 'online',
+      offlineMode: this.offlineMode,
+      status: this.connectionStatus
+    };
+  }
+
   static async makeRequest(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
     
@@ -199,7 +219,7 @@ class ApiService {
     try {
       // Clean phone number
       const cleanPhone = phone.replace(/\s/g, '');
-      console.log('🔓 Verifying phone sign-in code for clean phone:', cleanPhone);
+      console.log('🔐 Verifying phone sign-in code for clean phone:', cleanPhone);
       
       const response = await this.makeRequest('/auth/signin/phone/verify', {
         method: 'POST',
@@ -273,7 +293,7 @@ class ApiService {
     }
   }
 
-  // Test connection
+  // Test connection - ENHANCED with status tracking
   static async testConnection() {
     try {
       console.log('🔌 Testing API connection');
@@ -282,9 +302,11 @@ class ApiService {
         method: 'GET',
       });
 
+      this.connectionStatus = 'online';
       console.log('✅ API connection successful');
       return response;
     } catch (error) {
+      this.connectionStatus = 'offline';
       console.error('❌ API connection failed:', error);
       return { success: false, error: error.message };
     }
@@ -321,7 +343,7 @@ class ApiService {
     try {
       console.log('💳 Fetching transactions');
       
-      const response = await this.makeRequest(`/finance/transactions?limit=${limit}&offset=${offset}`, {
+      const response = await this.makeRequest(`/financial/transactions?limit=${limit}&offset=${offset}`, {
         method: 'GET',
       });
 
@@ -336,7 +358,7 @@ class ApiService {
     try {
       console.log('💳 Creating transaction');
       
-      const response = await this.makeRequest('/finance/transactions', {
+      const response = await this.makeRequest('/financial/transactions', {
         method: 'POST',
         body: JSON.stringify(transactionData),
       });
@@ -352,7 +374,7 @@ class ApiService {
     try {
       console.log('💳 Updating transaction:', transactionId);
       
-      const response = await this.makeRequest(`/finance/transactions/${transactionId}`, {
+      const response = await this.makeRequest(`/financial/transactions/${transactionId}`, {
         method: 'PUT',
         body: JSON.stringify(transactionData),
       });
@@ -368,7 +390,7 @@ class ApiService {
     try {
       console.log('💳 Deleting transaction:', transactionId);
       
-      const response = await this.makeRequest(`/finance/transactions/${transactionId}`, {
+      const response = await this.makeRequest(`/financial/transactions/${transactionId}`, {
         method: 'DELETE',
       });
 
@@ -384,7 +406,7 @@ class ApiService {
     try {
       console.log('🏦 Fetching accounts');
       
-      const response = await this.makeRequest('/finance/accounts', {
+      const response = await this.makeRequest('/financial/accounts', {
         method: 'GET',
       });
 
@@ -399,7 +421,7 @@ class ApiService {
     try {
       console.log('🏦 Creating account');
       
-      const response = await this.makeRequest('/finance/accounts', {
+      const response = await this.makeRequest('/financial/accounts', {
         method: 'POST',
         body: JSON.stringify(accountData),
       });
@@ -416,7 +438,7 @@ class ApiService {
     try {
       console.log('📂 Fetching categories');
       
-      const response = await this.makeRequest('/finance/categories', {
+      const response = await this.makeRequest('/financial/categories', {
         method: 'GET',
       });
 
@@ -427,12 +449,12 @@ class ApiService {
     }
   }
 
-  // Budgets
+  // Budgets - FIXED ENDPOINTS
   static async getBudgets() {
     try {
       console.log('📊 Fetching budgets');
       
-      const response = await this.makeRequest('/finance/budgets', {
+      const response = await this.makeRequest('/financial/budget', {
         method: 'GET',
       });
 
@@ -447,7 +469,7 @@ class ApiService {
     try {
       console.log('📊 Creating budget');
       
-      const response = await this.makeRequest('/finance/budgets', {
+      const response = await this.makeRequest('/financial/budget', {
         method: 'POST',
         body: JSON.stringify(budgetData),
       });
@@ -459,12 +481,12 @@ class ApiService {
     }
   }
 
-  // Goals
+  // Goals - FIXED ENDPOINTS
   static async getGoals() {
     try {
       console.log('🎯 Fetching goals');
       
-      const response = await this.makeRequest('/finance/goals', {
+      const response = await this.makeRequest('/financial/goals', {
         method: 'GET',
       });
 
@@ -479,7 +501,7 @@ class ApiService {
     try {
       console.log('🎯 Creating goal');
       
-      const response = await this.makeRequest('/finance/goals', {
+      const response = await this.makeRequest('/financial/goals', {
         method: 'POST',
         body: JSON.stringify(goalData),
       });
@@ -487,6 +509,45 @@ class ApiService {
       return response;
     } catch (error) {
       console.error('❌ Failed to create goal:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Financial Summary - FIXED ENDPOINT
+  static async getFinancialSummary() {
+    try {
+      console.log('📈 Fetching financial summary');
+      
+      const response = await this.makeRequest('/financial/summary', {
+        method: 'GET',
+      });
+
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to fetch financial summary:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Financial Upload - NEW METHOD
+  static async uploadFinancialFiles(files) {
+    try {
+      console.log('📄 Uploading financial files');
+      
+      const formData = new FormData();
+      files.forEach((file, index) => {
+        formData.append('files', file);
+      });
+      
+      const response = await this.makeRequest('/financial/upload', {
+        method: 'POST',
+        body: formData,
+        headers: {} // Let fetch set Content-Type for FormData
+      });
+
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to upload financial files:', error);
       return { success: false, error: error.message };
     }
   }
@@ -509,7 +570,7 @@ class ApiService {
 
   static async checkFeatureLimit(feature) {
     try {
-      console.log('🔍 Checking feature limit for:', feature);
+      console.log('🔒 Checking feature limit for:', feature);
       
       const response = await this.makeRequest('/subscriptions/check-limit', {
         method: 'POST',
@@ -638,6 +699,32 @@ class ApiService {
       console.error('❌ Biometric sign-in failed:', error);
       return { success: false, error: error.message };
     }
+  }
+
+  // NEW: Helper method to check stored user data
+  static async getStoredUser() {
+    try {
+      const token = await this.getToken();
+      if (!token) {
+        return { isAuthenticated: false, user: null };
+      }
+
+      // Try to validate token and get user data
+      const validation = await this.validateToken();
+      if (validation.success && validation.user) {
+        return { isAuthenticated: true, user: validation.user };
+      }
+
+      return { isAuthenticated: false, user: null };
+    } catch (error) {
+      console.error('❌ Failed to get stored user:', error);
+      return { isAuthenticated: false, user: null };
+    }
+  }
+
+  // NEW: Logout method (alias for signOut)
+  static async logout() {
+    return await this.signOut();
   }
 }
 
